@@ -3,11 +3,6 @@ import torchvision
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 import numpy as np
-import torch.nn.functional as F
-from torchvision.utils import save_image
-import os
-
-
 
 model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
 
@@ -45,12 +40,12 @@ my_transform = transforms.Compose(
      transforms.Normalize(norm_mean, norm_std),
 ])
 
-trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
+trainset = torchvision.datasets.CIFAR10(root='../data', train=True,
                                         download=True, transform=transform)
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
                                           shuffle=True, num_workers=2)
 
-testset = torchvision.datasets.CIFAR10(root='./data', train=False,
+testset = torchvision.datasets.CIFAR10(root='../data', train=False,
                                        download=True, transform=transform)
 testloader = torch.utils.data.DataLoader(testset, batch_size=4,
                                          shuffle=False, num_workers=2)
@@ -116,11 +111,11 @@ def test_acc_new(model, testloader, test_images, n_image = 100, save_test_images
 
 test_accuracy, resnet56_labels, orig = test_acc_new(model, testloader, org_img, mt, True)
 
-epsilons=[0,0.001,0.002,0.003,0.004,0.005]
+epsilons=[0,0.05]
 accuracies=[]
 
-from fgsm import FGSM
-
+# from fgsm import FGSM
+from deepfool import DeepFool
 
 fgsm_img = []
 # attack=FGSM(model)
@@ -139,7 +134,7 @@ fgsm_examples = []
 for eps in epsilons:
     visual_examples = 5
     fgsm_img = []
-    attack = FGSM(model, eps)
+    attack = DeepFool(model, eps)
     count = 0
     for i in range(mt):
         fgsm_img.append(attack(org_img[i], org_labels[i]))
