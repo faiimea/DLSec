@@ -1,5 +1,3 @@
-from typing import Callable
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as f
@@ -12,12 +10,11 @@ class DIFGSM(Attack):
     def __init__(
         self,
         model: nn.Module,
-        transform: None,
-        alpha: None,
+        transform = None,
+        alpha = None,
         device=None,
         eps: float = 8 / 255,
         steps: int = 10,
-
         decay: float = 1.0,
         resize_rate: float = 0.9,
         diversity_prob: float = 1.0,

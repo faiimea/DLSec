@@ -1,5 +1,3 @@
-from typing import Callable
-
 import torch
 import torch.nn as nn
 
@@ -11,12 +9,11 @@ class MIFGSM(Attack):
     def __init__(
         self,
         model: nn.Module,
-        transform: None,
+        transform=None,
         alpha=None,
         device=None,
         eps: float = 8 / 255,
         steps: int = 10,
-
         decay: float = 1.0,
         clip_min: float = 0.0,
         clip_max: float = 1.0,

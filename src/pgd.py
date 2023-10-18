@@ -19,20 +19,6 @@ class PGD(Attack):
         device= None,
         transform = None,
     ) :
-        """Initialize the PGD attack.
-
-        Args:
-            model: The model to attack.
-            transform: A transform to normalize images.
-            eps: The maximum perturbation. Defaults to 8/255.
-            steps: Number of steps. Defaults to 10.
-            alpha: Step size, `eps / steps` if None. Defaults to None.
-            random_start: Start from random uniform perturbation. Defaults to True.
-            clip_min: Minimum value for clipping. Defaults to 0.0.
-            clip_max: Maximum value for clipping. Defaults to 1.0.
-            targeted: Targeted attack if True. Defaults to False.
-            device: Device to use for tensors. Defaults to cuda if available.
-        """
 
         super().__init__(transform, device)
 

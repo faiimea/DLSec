@@ -2,22 +2,20 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable
 
 import torch
-
+'''
+Base.py
+As the base class for all Adversarial Attacks.
+'''
 
 class Attack(ABC):
 
-    def __init__(
-        self,
-        # transform: Callable[[torch.Tensor], torch.Tensor] | None,
-        # device: torch.device | None,
-        transform:  None,
-        device: None,
-    ) -> None:
+    def __init__(self,transform:  None,device: None,) -> None:
         super().__init__()
-        # If transform is None, use identity transform.
+        # If transform is None -> Just original X
         self.transform = transform if transform else lambda x: x
 
         # Set device to given or defaults to cuda if available.
+        # Use CPU to make the code useful on my fucking mac withouot cuda
         is_cuda = torch.cuda.is_available()
         self.device = device if device else torch.device("cuda" if is_cuda else "cpu")
 

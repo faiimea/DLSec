@@ -1,5 +1,3 @@
-from typing import Callable
-
 import torch
 import torch.nn as nn
 
@@ -7,16 +5,15 @@ from base import Attack
 
 
 class VMIFGSM(Attack):
-    """The VMI-FGSM (Variance-tuned Momentum Iterative FGSM) attack.
-
-    From the paper 'Enhancing the Transferability of Adversarial Attacks through
-    Variance Tuning' https://arxiv.org/abs/2103.15571
+    """
+    The VMI-FGSM (Variance-tuned Momentum Iterative FGSM) attack.
+    'Enhancing the Transferability of Adversarial Attacks through Variance Tuning' 
     """
 
     def __init__(
         self,
         model: nn.Module,
-        transform: None,
+        transform= None,
         device=None,
         alpha=None,
         eps: float = 8 / 255,

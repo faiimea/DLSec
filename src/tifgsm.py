@@ -1,5 +1,3 @@
-from typing import Callable
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -13,7 +11,7 @@ class TIFGSM(Attack):
     def __init__(
         self,
         model: nn.Module,
-        transform: None,
+        transform=None,
         device=None,
         alpha=None,
         eps: float = 8 / 255,
@@ -41,15 +39,6 @@ class TIFGSM(Attack):
         self.lossfn = nn.CrossEntropyLoss()
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        """Perform TI-FGSM on a batch of images.
-
-        Args:
-            x: A batch of images. Shape: (N, C, H, W).
-            y: A batch of labels. Shape: (N).
-
-        Returns:
-            The perturbed images if successful. Shape: (N, C, H, W).
-        """
 
         g = torch.zeros_like(x)
         delta = torch.zeros_like(x, requires_grad=True)

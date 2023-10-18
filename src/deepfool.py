@@ -1,5 +1,3 @@
-from typing import Callable
-
 import torch
 import torch.nn as nn
 
@@ -7,10 +5,9 @@ from base import Attack
 
 
 class DeepFool(Attack):
-    """The DeepFool attack.
-
+    """
+    The DeepFool attack.
     From the paper 'DeepFool: A Simple and Accurate Method to Fool Deep Neural Networks'
-    https://arxiv.org/abs/1511.04599
     """
 
     def __init__(

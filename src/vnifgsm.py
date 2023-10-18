@@ -1,5 +1,3 @@
-from typing import Callable
-
 import torch
 import torch.nn as nn
 
@@ -11,7 +9,7 @@ class VNIFGSM(Attack):
     def __init__(
         self,
         model: nn.Module,
-        transform: None,
+        transform=None,
         device=None,
         alpha=None,
         eps: float = 8 / 255,

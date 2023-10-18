@@ -110,12 +110,12 @@ def test_acc_new(model, testloader, test_images, n_image = 100, save_test_images
     
 
 test_accuracy, resnet56_labels, orig = test_acc_new(model, testloader, org_img, mt, True)
-
-epsilons=[0,0.05]
+# Here no need for another 0
+epsilons=[0.005]
 accuracies=[]
 
-# from fgsm import FGSM
-from deepfool import DeepFool
+from pgd import PGD
+# from deepfool import DeepFool
 
 fgsm_img = []
 # attack=FGSM(model)
@@ -134,7 +134,7 @@ fgsm_examples = []
 for eps in epsilons:
     visual_examples = 5
     fgsm_img = []
-    attack = DeepFool(model, eps)
+    attack = PGD(model, eps=eps)
     count = 0
     for i in range(mt):
         fgsm_img.append(attack(org_img[i], org_labels[i]))
