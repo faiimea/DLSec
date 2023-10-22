@@ -12,7 +12,7 @@
 * VMIFGSM: Variance-tuned Momentum Iterative FGSM
 * VNIFGSM: Variance-tuned Nesterov Iterative FGSM
 * PGD: Projected Gradient Descent
-* DEEPFOOL - 似乎有一点点bug，但是能跑通
+* DEEPFOOL - 似乎有一点点bug，但是能跑通(注意，在mac中跑了一个晚上才跑出来一个epsilon，慎重验证)
 
 ## Data
 使用CIFAR-10进行测试(没有上传到Github)
