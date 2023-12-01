@@ -1,7 +1,8 @@
+import cv2
 import torch
 from datetime import datetime
 from typing import Any
-from torchvision import transforms
+from torchvision import transforms,datasets
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score
 
@@ -110,7 +111,7 @@ class BackdoorAttack:
         self.model_path = "checkpoints/" + datetime.now().strftime("%Y%m%d-%H%M%S-") + tag + ".pth"
         if isinstance(clean_dataset, str):
             print("自定义数据集仍在开发中")
-            raise NotImplementedError
+            self.clean_traindata=datasets.DatasetFolder(clean_dataset+"/train",cv2.imread)
         else:
             self.clean_traindata = clean_dataset(self.data_path, train=True, download=True)
             self.clean_testdata = clean_dataset(self.data_path, train=False, download=True)
