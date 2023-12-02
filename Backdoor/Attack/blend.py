@@ -5,26 +5,33 @@ from PIL import Image
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-from torchvision.transforms import ToTensor
+from torchvision.transforms import ToTensor, Resize
 
 _totensor = ToTensor()
 
 
-def implement_trigger(mode, clean_img, original_pic_width, original_pic_height, trigger_pic_path, trigger_size):
-    trigger_image = Image.open(trigger_pic_path).convert(mode).resize((trigger_size[0], trigger_size[1]))
-    clean_img.paste(trigger_image, (original_pic_width - trigger_size[0], original_pic_height - trigger_size[1]))
-    return clean_img
-
-
 def create_poisoned_data(dataset):
     class Poisoned_data(dataset):
-        def __init__(self, root, transform, poison_rate, isTrain, target_label, trigger_path, trigger_size, origindata_isTensor):
+        def __init__(self, root, transform, poison_rate, isTrain, target_label, origindata_isTensor, blend_pic_path, blend_ratio):
             super().__init__(root, train=isTrain, transform=transform, download=True)
             self.width, self.height, self.channels = self.__shape_info__()
             self.target_label = target_label
-            self.trigger_path = trigger_path
-            self.trigger_size = trigger_size
             self.origindata_isTensor = origindata_isTensor
+            self.blend_ratio = blend_ratio
+            if blend_pic_path is None:
+                self.blend_tensor = torch.rand(self.width, self.height)
+            else:
+                blend_pic = Image.open(blend_pic_path).resize((self.width, self.height))
+
+                if self.channels == 2:
+                    blend_pic = blend_pic.convert("L")
+                elif self.channels == 3:
+                    blend_pic = blend_pic.convert("RGB")
+                elif self.channels == 4:
+                    blend_pic = blend_pic.convert("RGBA")
+                if origindata_isTensor:
+                    blend_pic = _totensor(blend_pic).squeeze()
+                self.blend_tensor = transform(blend_pic)
 
             self.poison_rate = poison_rate if isTrain else 1.0
             indices = range(len(self.targets))
@@ -39,47 +46,37 @@ def create_poisoned_data(dataset):
         def __getitem__(self, index):
             img, target = self.data[index], self.targets[index]
 
+            if self.transform is not None:
+                img = self.transform(img)
+
             if isinstance(img, np.ndarray):
-                if len(img.shape) == 2:
-                    img = Image.fromarray(img, mode='L')
-                else:
-                    img = Image.fromarray(img)
-            elif isinstance(img, torch.Tensor):
-                if len(img.shape) == 2:
-                    img = Image.fromarray(img.numpy(), mode='L')
-                else:
-                    img = Image.fromarray(img.numpy())
+                img = _totensor(img)
             elif isinstance(img, Image.Image):
+                img = _totensor(img)
+            elif isinstance(img, torch.Tensor):
                 pass
             else:
                 raise TypeError("数据类型不支持，请检查")
 
             if index in self.poi_indices:
                 target = self.target_label
-                if self.channels > 2:
-                    img = implement_trigger('RGB', img, self.width, self.width, self.trigger_path, self.trigger_size)
-                else:
-                    img = implement_trigger('L', img, self.width, self.width, self.trigger_path, self.trigger_size)
-
-            if self.transform is not None:
-                if self.origindata_isTensor:
-                    img = _totensor(img).squeeze()
-                img = self.transform(img)
+                img = img * (1 - self.blend_ratio) + self.blend_tensor * self.blend_ratio
 
             if not isinstance(target, torch.Tensor):
                 target = torch.tensor(target)
+
             return img, target
 
     return Poisoned_data
 
 
-class Badnets(base.BackdoorAttack):
+class Blend(base.BackdoorAttack):
     def __init__(self, tag: str = 'CustomModel', device: str = 'cpu', model=None, dataset=None, poison_rate: float = 0.05, lr: float = 0.1, target_label=2, epochs: int = 20, batch_size: int = 64, optimizer: str = 'sgd', criterion=None, local_model_path: str = None,
-                 trigger_path: str = None, trigger_size: tuple = (5, 5)):
+                 blend_pic_path: str = None, blend_ratio: float = 0.1):
         super().__init__(tag, device, model, dataset, poison_rate, lr, target_label, epochs, batch_size, optimizer, criterion, local_model_path)
 
-        poisoned_train_data = create_poisoned_data(dataset)(self.data_path, self.transform, poison_rate, True, target_label, trigger_path, trigger_size, self.poisondata_isTensor)
-        poisoned_test_data = create_poisoned_data(dataset)(self.data_path, self.transform, poison_rate, False, target_label, trigger_path, trigger_size, self.poisondata_isTensor)
+        poisoned_train_data = create_poisoned_data(dataset)(self.data_path, self.transform, poison_rate, True, target_label, self.poisondata_isTensor, blend_pic_path, blend_ratio)
+        poisoned_test_data = create_poisoned_data(dataset)(self.data_path, self.transform, poison_rate, False, target_label, self.poisondata_isTensor, blend_pic_path, blend_ratio)
         self.dataloader_train = DataLoader(poisoned_train_data, batch_size=self.batch_size, shuffle=True)
         self.dataloader_cleantest = DataLoader(self.clean_testdata, batch_size=self.batch_size, shuffle=True)
         self.dataloader_poisonedtest = DataLoader(poisoned_test_data, batch_size=self.batch_size, shuffle=True)

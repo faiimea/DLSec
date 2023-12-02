@@ -22,4 +22,4 @@ traindataloader = DataLoader(traindataset, batch_size=64, shuffle=True)
 如果之前进行过逆向检测，那么run只显示之前计算的结果，否则会重新进行计算。
 """
 bdd=BackdoorDefense(dataloader=traindataloader,model=model,triggerpath="20231202-002425-WaNetCifar10pretrained.pth")
-bdd.run(alreadyreverse=True)
+bdd.run(alreadyreverse=False)

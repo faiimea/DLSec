@@ -2,14 +2,15 @@ import torchvision.datasets
 import torch
 from Attack.BadNets import Badnets
 from Attack.WaNet import WaNet
+from Attack.blend import Blend
 from LocalModels.net import Net
 # import pretrainedmodels
 from torchvision import models
 from torch import nn
-model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
+# model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
 # model = pretrainedmodels.__dict__['resnet50'](num_classes=1000, pretrained='imagenet')
 # model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar100_resnet56", pretrained=True)
-# model=Net(1,10)
+model=Net(1,10)
 
 '''
 model=models.resnet50(pretrained=False)
@@ -18,7 +19,7 @@ model.fc = nn.Sequential(nn.Linear(model.fc.in_features, 100),
 '''
 
 if __name__ == "__main__":
-    attack_mode="WaNet"
+    attack_mode="Blend"
 
     if attack_mode=="Badnets":
         Badnets_params = {
@@ -64,6 +65,26 @@ if __name__ == "__main__":
         WaNet_victim.train()
         WaNet_victim.test()
         WaNet_victim.display()
+    elif attack_mode=="Blend":
+        Blend_params = {
+            'tag': "BlendMNIST",
+            'device': 'cuda',
+            'model': model,
+            'dataset': torchvision.datasets.MNIST,
+            'poison_rate': 0.05,
+            'lr': 0.05,
+            'target_label': 3,
+            'epochs': 20,
+            'batch_size': 128,
+            'optimizer': 'sgd',
+            'criterion': torch.nn.CrossEntropyLoss(),
+            'local_model_path': None,  # LocalModels下相对路径
+            'blend_pic_path': './Attack/triggers/logo.png',
+            'blend_ratio': 0.1
+        }
+        Blend_victim=Blend(**Blend_params)
+        Blend_victim.train()
+        Blend_victim.display()
     else:
         raise NotImplementedError
 
