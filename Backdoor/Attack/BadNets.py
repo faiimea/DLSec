@@ -5,6 +5,8 @@ from PIL import Image
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+from torchvision.transforms import ToTensor
+_totensor=ToTensor()
 
 def implement_trigger(mode,clean_img, original_pic_width, original_pic_height, trigger_pic_path, trigger_size):
     trigger_image = Image.open(trigger_pic_path).convert(mode).resize((trigger_size[0], trigger_size[1]))
@@ -14,12 +16,13 @@ def implement_trigger(mode,clean_img, original_pic_width, original_pic_height, t
 
 def create_poisoned_data(dataset):
     class Poisoned_data(dataset):
-        def __init__(self, root, transform, poison_rate, isTrain, target_label, trigger_path, trigger_size):
+        def __init__(self, root, transform, poison_rate, isTrain, target_label, trigger_path, trigger_size,origindata_isTensor):
             super().__init__(root, train=isTrain, transform=transform, download=True)
             self.width, self.height, self.channels = self.__shape_info__()
             self.target_label = target_label
             self.trigger_path = trigger_path
             self.trigger_size = trigger_size
+            self.origindata_isTensor=origindata_isTensor
 
             self.poison_rate = poison_rate if isTrain else 1.0
             indices = range(len(self.targets))
@@ -33,10 +36,17 @@ def create_poisoned_data(dataset):
 
         def __getitem__(self, index):
             img, target = self.data[index], self.targets[index]
+
             if isinstance(img, np.ndarray):
-                img = Image.fromarray(img)
+                if len(img.shape)==2:
+                    img = Image.fromarray(img,mode='L')
+                else:
+                    img = Image.fromarray(img)
             elif isinstance(img, torch.Tensor):
-                img = Image.fromarray(img.numpy())
+                if len(img.shape)==2:
+                    img = Image.fromarray(img.numpy(),mode='L')
+                else:
+                    img = Image.fromarray(img.numpy())
             elif isinstance(img, Image.Image):
                 pass
             else:
@@ -50,6 +60,8 @@ def create_poisoned_data(dataset):
                     img = implement_trigger('L',img, self.width, self.width, self.trigger_path, self.trigger_size)
 
             if self.transform is not None:
+                if self.origindata_isTensor:
+                    img=_totensor(img).squeeze()
                 img = self.transform(img)
 
             if not isinstance(target, torch.Tensor):
@@ -64,8 +76,8 @@ class Badnets(base.BackdoorAttack):
                  trigger_path: str = None, trigger_size: tuple = (5, 5)):
         super().__init__(tag, device, model, dataset, poison_rate, lr, target_label, epochs, batch_size, optimizer, criterion, local_model_path)
 
-        poisoned_train_data = create_poisoned_data(dataset)(self.data_path, self.transform, poison_rate, True, target_label, trigger_path, trigger_size)
-        poisoned_test_data = create_poisoned_data(dataset)(self.data_path, self.transform, poison_rate, False, target_label, trigger_path, trigger_size)
+        poisoned_train_data = create_poisoned_data(dataset)(self.data_path, self.transform, poison_rate, True, target_label, trigger_path, trigger_size,self.poisondata_isTensor)
+        poisoned_test_data = create_poisoned_data(dataset)(self.data_path, self.transform, poison_rate, False, target_label, trigger_path, trigger_size,self.poisondata_isTensor)
         self.dataloader_train = DataLoader(poisoned_train_data, batch_size=self.batch_size, shuffle=True)
         self.dataloader_cleantest = DataLoader(self.clean_testdata, batch_size=self.batch_size, shuffle=True)
         self.dataloader_poisonedtest = DataLoader(poisoned_test_data, batch_size=self.batch_size, shuffle=True)

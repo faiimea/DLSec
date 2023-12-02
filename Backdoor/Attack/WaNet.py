@@ -85,7 +85,10 @@ def create_poisoned_data(dataset):
                 noise_grid = torch.clamp(self.WAgrid + ins / self.height, -1, 1)
                 img = F.grid_sample(img.unsqueeze(0), noise_grid, align_corners=True).squeeze()
             else:
-                pass
+                img = img.squeeze()
+
+            if self.channels == 2:
+                img = img.unsqueeze(0)
 
             if not isinstance(target, torch.Tensor):
                 target = torch.tensor(target)

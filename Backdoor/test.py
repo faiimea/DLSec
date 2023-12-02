@@ -9,6 +9,8 @@ from torch import nn
 model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
 # model = pretrainedmodels.__dict__['resnet50'](num_classes=1000, pretrained='imagenet')
 # model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar100_resnet56", pretrained=True)
+# model=Net(1,10)
+
 '''
 model=models.resnet50(pretrained=False)
 model.fc = nn.Sequential(nn.Linear(model.fc.in_features, 100),
@@ -20,11 +22,11 @@ if __name__ == "__main__":
 
     if attack_mode=="Badnets":
         Badnets_params = {
-            'tag': "Badnetcifar10pretrained",
+            'tag': "BadnetMNIST",
             'device': 'cuda',
             'model': model,
-            'dataset': torchvision.datasets.CIFAR10,
-            'poison_rate': 0.05,
+            'dataset': torchvision.datasets.MNIST,
+            'poison_rate': 0.1,
             'lr': 0.05,
             'target_label': 3,
             'epochs': 20,
@@ -42,7 +44,7 @@ if __name__ == "__main__":
 
     elif attack_mode=="WaNet":
         WaNet_params = {
-            'tag': "WaNetCifar10pretrained",
+            'tag': "WaNetCIFAR",
             'device': 'cuda',
             'model': model,
             'dataset': torchvision.datasets.CIFAR10,
@@ -53,7 +55,7 @@ if __name__ == "__main__":
             'batch_size': 128,
             'optimizer': 'sgd',
             'criterion': torch.nn.CrossEntropyLoss(),
-            'local_model_path': "20231202-002425-WaNetCifar10pretrained.pth",  # LocalModels下相对路径
+            'local_model_path': None,  # LocalModels下相对路径
             's': 0.5,
             'k': 4,
             'noise_ratio': 0.2

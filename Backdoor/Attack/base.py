@@ -2,7 +2,7 @@ import cv2
 import torch
 from datetime import datetime
 from typing import Any
-from torchvision import transforms,datasets
+from torchvision import transforms, datasets
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score
 
@@ -33,27 +33,34 @@ def optimizer_picker(optimization, param, lr):
     return optimizer
 
 
-def build_transform(mode):
+def to_float_tensor(image):
+    return image.float()
+
+
+def build_transform(mode, isTensor=False):
+    transform = transforms.Compose([])
+    if not isTensor:
+        transform.transforms.append(transforms.ToTensor())
+    transform.transforms.append(transforms.Lambda(to_float_tensor))
     if len(mode) == 3 and mode[2] == 3:
         mean, std = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
         channels = 3
     elif len(mode) == 2:
         mean, std = (0.5,), (0.5,)
         channels = 1
+        if isTensor:
+            transform.transforms.append(transforms.Lambda(lambda x: x.unsqueeze(0)))
     elif len(mode) == 3 and mode[2] == 4:
         mean, std = (0.5, 0.5, 0.5, 0.5), (0.5, 0.5, 0.5, 0.5)
         channels = 4
     else:
         raise NotImplementedError()
 
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean, std)
-    ])
+    transform.transforms.append(transforms.Normalize(mean, std))
+
     mean = torch.as_tensor(mean)
     std = torch.as_tensor(std)
     detransform = transforms.Normalize((-mean / std).tolist(), (1.0 / std).tolist())
-
     return transform, detransform, channels
 
 
@@ -111,18 +118,21 @@ class BackdoorAttack:
         self.model_path = "checkpoints/" + datetime.now().strftime("%Y%m%d-%H%M%S-") + tag + ".pth"
         if isinstance(clean_dataset, str):
             print("自定义数据集仍在开发中")
-            self.clean_traindata=datasets.DatasetFolder(clean_dataset+"/train",cv2.imread)
+            self.clean_traindata = datasets.DatasetFolder(clean_dataset + "/train", cv2.imread)
         else:
             self.clean_traindata = clean_dataset(self.data_path, train=True, download=True)
             self.clean_testdata = clean_dataset(self.data_path, train=False, download=True)
-        self.transform, self.detransform, self.channels = build_transform(self.clean_traindata.data.shape[1:])
-        self.data_shape=self.clean_traindata.data.shape[1:]
+        self.poisondata_isTensor=isinstance(self.clean_traindata.data[0], torch.Tensor)
+        self.cleandata_isTensor=isinstance(self.clean_testdata[0], torch.Tensor)
+        self.transform, self.detransform, self.channels = build_transform(self.clean_traindata.data.shape[1:], self.poisondata_isTensor)
+        self.data_shape = self.clean_traindata.data.shape[1:]
+
         self.clean_traindata.transform = self.transform
-        self.clean_testdata.transform = self.transform
+        self.clean_testdata.transform,_,_ = build_transform(self.clean_testdata.data.shape[1:],self.cleandata_isTensor)
 
         if local_model_path is not None:
-            print("Loading local model {",local_model_path,"}")
-            self.model = torch.load("./LocalModels/"+local_model_path).to(self.device)
+            print("Loading local model {", local_model_path, "}")
+            self.model = torch.load("./LocalModels/" + local_model_path).to(self.device)
             self.model_path = "checkpoints/" + local_model_path
         else:
             self.model = model.to(self.device)
