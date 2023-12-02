@@ -3,10 +3,9 @@ import torch
 from Attack.BadNets import Badnets
 from Attack.WaNet import WaNet
 from LocalModels.net import Net
-import pretrainedmodels
+# import pretrainedmodels
 from torchvision import models
 from torch import nn
-
 model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
 # model = pretrainedmodels.__dict__['resnet50'](num_classes=1000, pretrained='imagenet')
 # model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar100_resnet56", pretrained=True)
@@ -61,8 +60,8 @@ if __name__ == "__main__":
         }
         WaNet_victim = WaNet(**WaNet_params)
         WaNet_victim.train()
-        # WaNet_victim.test()
-        # WaNet_victim.display()
+        WaNet_victim.test()
+        WaNet_victim.display()
     else:
         raise NotImplementedError
 
