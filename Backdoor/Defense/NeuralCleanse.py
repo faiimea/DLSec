@@ -5,9 +5,6 @@ import random
 import cv2
 import pickle
 import torch.nn.functional as F
-import tensorflow as tf
-from tensorflow import keras
-from keras import backend as K
 import os
 def resize_image(image, target_size):
     resized_image = cv2.resize(image, target_size)
@@ -105,6 +102,7 @@ class NeuralCleanse():
             best_loss = 1e+10
             loss_dict = {'loss': []}
 
+
             # Define the training loop
             for r in range(opt_round):
                 m_opt.zero_grad()
@@ -153,9 +151,9 @@ class NeuralCleanse():
                         bckdr_acc = (torch.argmax(self.model(poisoned_x), dim=1) == torch.argmax(y_t,dim=1)).float().mean().item()
 
                     print("\nbackdoor accuracy:", "{0:.2f}".format(bckdr_acc))
-            # trigger = (torch.sigmoid(delta).item(), torch.sigmoid(m).item(), torch.sum(torch.abs(torch.sigmoid(m))).item())
-            # self.triggers.append(trigger)
-            self.triggers.append((K.get_value(delta.detach().clone()), K.get_value(m.detach().clone()), K.get_value(K.sum(K.abs(K.sigmoid(m.detach().clone()))))))
+            trigger = (delta.detach().clone(), m.detach().clone(), torch.sum(torch.abs(torch.sigmoid(m.detach().clone()))))
+            self.triggers.append(trigger)
+            # self.triggers.append((K.get_value(delta.detach().clone()), K.get_value(m.detach().clone()), K.get_value(K.sum(K.abs(K.sigmoid(m.detach().clone()))))))
         with open('./Defense'+self.path+'/triggers.npy', 'wb') as f:
             pickle.dump(self.triggers,f)
 
