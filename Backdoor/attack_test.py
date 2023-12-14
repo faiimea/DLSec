@@ -57,6 +57,7 @@ if __name__ == "__main__":
             'optimizer': 'sgd',
             'criterion': torch.nn.CrossEntropyLoss(),
             'local_model_path': None,  # LocalModels下相对路径
+            'WAgrid_path':None,
             's': 0.5,
             'k': 4,
             'noise_ratio': 0.2

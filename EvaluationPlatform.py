@@ -35,7 +35,7 @@ evaluation_params = {
 }
 
 
-def ModelEvaluation(model_path: str = None, adversarial_method: str = None, backdoor_method: str = None, datapoison_method: str = None, use_dataset: str = 'CIFAR10',batch_size:int=64):
+def ModelEvaluation(model_path: str = None, adversarial_method: str = None, backdoor_method: str = None, datapoison_method: str = None, use_dataset: str = 'CIFAR10', batch_size: int = 64):
     """
 
     @param model_path: 待测模型的路径
@@ -46,9 +46,9 @@ def ModelEvaluation(model_path: str = None, adversarial_method: str = None, back
     @param batch_size: 可选参数，指定加载数据集时的批次大小
     @return:
     """
-    train_dataloader,test_dataloader=dataset_preprocess(use_dataset)
+    train_dataloader, test_dataloader = dataset_preprocess(use_dataset)
     Model2BeEvaluated = torch.load(model_path)
-    isBackdoored, isPoisoned = run_test_on_model(Model2BeEvaluated, adversarial_method, backdoor_method, datapoison_method,train_dataloader,test_dataloader)
+    isBackdoored, isPoisoned = run_test_on_model(Model2BeEvaluated, adversarial_method, backdoor_method, datapoison_method, train_dataloader, test_dataloader)
 
     ReinforcedModel = copy.deepcopy(Model2BeEvaluated)
     if isBackdoored:
@@ -58,7 +58,7 @@ def ModelEvaluation(model_path: str = None, adversarial_method: str = None, back
     run_test_on_model(ReinforcedModel, adversarial_method, backdoor_method, datapoison_method)
 
 
-def dataset_preprocess(name,batch_size=64):
+def dataset_preprocess(name, batch_size=64):
     if name is None:
         return None, None
     elif name in torchvision.datasets.__all__:
@@ -79,18 +79,18 @@ def dataset_preprocess(name,batch_size=64):
     train_dataset.transform = transform
     test_dataset.transform = transform
 
-    return DataLoader(train_dataset, batch_size=batch_size, shuffle=True),DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+    return DataLoader(train_dataset, batch_size=batch_size, shuffle=True), DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
 
-def run_test_on_model(model, adversarial_method, backdoor_method, datapoison_method,train_dataloader=None,test_dataloader=None):
-    adversarial_rst = adversarial_test(model, adversarial_method,train_dataloader)
-    isBackdoored, backdoor_rst = backdoor_detect(model, backdoor_method,train_dataloader)
-    isPoisoned, datapoison_rst = datapoison_detect(model, datapoison_method,train_dataloader)
+def run_test_on_model(model, adversarial_method, backdoor_method, datapoison_method, train_dataloader=None, test_dataloader=None):
+    adversarial_rst = adversarial_test(model, adversarial_method, train_dataloader)
+    isBackdoored, backdoor_rst = backdoor_detect(model, backdoor_method, train_dataloader)
+    isPoisoned, datapoison_rst = datapoison_detect(model, datapoison_method, train_dataloader)
     process_result(adversarial_rst, backdoor_rst, datapoison_rst)
     return isBackdoored, isPoisoned
 
 
-def adversarial_test(model, method='fgsm',train_dataloader=None):
+def adversarial_test(model, method='fgsm', train_dataloader=None):
     adversarial_rst = None
     '''在此调用对抗攻击测试方法，传入待测模型、攻击方式、数据集（如果指定了）等用户设置的参数，返回测试结果：【原始与对抗样本准确率、准确率差，准确率降低一定比例（如50%）时对抗样本与原始样本差异度（p阶范数距离），】
         进阶指标：【对抗样本对噪声容忍度，高斯模糊鲁棒性，图像压缩鲁棒性，生成对抗样本所需时间】
@@ -98,7 +98,7 @@ def adversarial_test(model, method='fgsm',train_dataloader=None):
     return adversarial_rst
 
 
-def backdoor_detect(model, method='NeuralCleanse',train_dataloader=None):
+def backdoor_detect(model, method='NeuralCleanse', train_dataloader=None):
     # 在此执行后门检测
     isBackdoored = False
     backdoor_rst = None

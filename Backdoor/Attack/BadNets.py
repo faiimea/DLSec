@@ -74,9 +74,9 @@ def create_poisoned_data(dataset):
 
 
 class Badnets(base.BackdoorAttack):
-    def __init__(self, tag: str = 'CustomModel', device: str = 'cpu', model=None, dataset=None, poison_rate: float = 0.05, lr: float = 0.1, target_label=2, epochs: int = 20, batch_size: int = 64, optimizer: str = 'sgd', criterion=None, local_model_path: str = None,
+    def __init__(self, tag: str = 'CustomModel', device: str = 'cpu', model=None, dataset=None,data_download_path=None, poison_rate: float = 0.05, lr: float = 0.1, target_label=2, epochs: int = 20, batch_size: int = 64, optimizer: str = 'sgd', criterion=None, local_model_path: str = None,
                  trigger_path: str = None, trigger_size: tuple = (5, 5)):
-        super().__init__(tag, device, model, dataset, poison_rate, lr, target_label, epochs, batch_size, optimizer, criterion, local_model_path)
+        super().__init__(tag, device, model, dataset, data_download_path,poison_rate, lr, target_label, epochs, batch_size, optimizer, criterion, local_model_path)
 
         poisoned_train_data = create_poisoned_data(dataset)(self.data_path, self.transform, poison_rate, True, target_label, trigger_path, trigger_size, self.poisondata_isTensor)
         poisoned_test_data = create_poisoned_data(dataset)(self.data_path, self.transform, poison_rate, False, target_label, trigger_path, trigger_size, self.poisondata_isTensor)
