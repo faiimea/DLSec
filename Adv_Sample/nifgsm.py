@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from torchattack.base import Attack
+from base import Attack
 
 
 class NIFGSM(Attack):
