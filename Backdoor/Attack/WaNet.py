@@ -105,16 +105,21 @@ class WaNet(base.BackdoorAttack):
             noise_ratio(float):为隐藏攻击模式而使用的噪声扭曲网格在总数据中的占比
         """
 
-    def __init__(self, tag: str = 'CustomModel', device: str = 'cpu', model=None, dataset=None, poison_rate: float = 0.05, lr: float = 0.1, target_label=2, epochs: int = 20, batch_size: int = 64, optimizer: str = 'sgd', criterion=None, local_model_path: str = None, s: float = 0.5, k: int = 4,
+    def __init__(self, tag: str = 'CustomModel', device: str = 'cpu', model=None, dataset=None,data_download_path=None, poison_rate: float = 0.05, lr: float = 0.1, target_label=2, epochs: int = 20, batch_size: int = 64, optimizer: str = 'sgd', criterion=None, local_model_path: str = None,WAgrid_path:str=None, s: float = 0.5, k: int = 4,
                  noise_ratio: float = 0.2):
-        super().__init__(tag, device, model, dataset, poison_rate, lr, target_label, epochs, batch_size, optimizer, criterion, local_model_path)
-        if local_model_path is not None and os.path.isfile("./LocalModels/"+local_model_path[:-4]+"WAgrid.pt"):
-            self.WAgrid=torch.load("./LocalModels/"+local_model_path[:-4]+"WAgrid.pt")
+        super().__init__(tag, device, model, dataset,data_download_path, poison_rate, lr, target_label, epochs, batch_size, optimizer, criterion, local_model_path)
+        if WAgrid_path is not None:
+            if os.path.exists(WAgrid_path):
+                self.WAgrid=torch.load(WAgrid_path)
+            else:
+                self.identity_grid, self.elastic_grid = gen_grid(int(self.data_shape[0]), k)
+                grid = self.identity_grid + s * self.elastic_grid / self.data_shape[0]
+                self.WAgrid = torch.clamp(grid, -1, 1)
+                torch.save(self.WAgrid, WAgrid_path)
         else:
             self.identity_grid, self.elastic_grid = gen_grid(int(self.data_shape[0]), k)
             grid = self.identity_grid + s * self.elastic_grid / self.data_shape[0]
             self.WAgrid = torch.clamp(grid, -1, 1)
-            torch.save(self.WAgrid,self.model_path[:-4]+"WAgrid.pt")
 
         poisoned_train_data = create_poisoned_data(dataset)(self.data_path, self.transform, poison_rate, True, target_label, self.WAgrid, noise_ratio)
         poisoned_test_data = create_poisoned_data(dataset)(self.data_path, self.transform, poison_rate, False, target_label, self.WAgrid, 0)
@@ -122,10 +127,14 @@ class WaNet(base.BackdoorAttack):
         self.dataloader_cleantest = DataLoader(self.clean_testdata, batch_size=self.batch_size, shuffle=True)
         self.dataloader_poisonedtest = DataLoader(poisoned_test_data, batch_size=self.batch_size, shuffle=True)
 
-    def train(self):
-        print("Training on {", self.device, "}")
+    def train(self,epochs=None):
+        if epochs is None:
+            train_epochs=self.epochs
+        else:
+            train_epochs=epochs
+        print(f"Training on {self.device} for {train_epochs} epochs\n")
         min_loss = np.inf
-        for epoch in range(self.epochs):
+        for epoch in range(train_epochs):
             train_stats = self.train_one_epoch(self.dataloader_train, self.model, self.optimizer, self.criterion, self.device)
             test_stats = self.evaluate_model(self.dataloader_cleantest, self.dataloader_poisonedtest, self.model, self.criterion, self.device)
             print(f"EPOCH {epoch + 1}/{self.epochs}   loss: {train_stats['loss']:.4f} CDA: {test_stats['CDA']:.4f}, ASR: {test_stats['ASR']:.4f}\n")

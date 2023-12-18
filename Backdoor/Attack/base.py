@@ -111,9 +111,12 @@ def evaluate_model(clean_test_data, poisoned_test_data, model, criterion, device
 
 
 class BackdoorAttack:
-    def __init__(self, tag: str = 'CustomModel', device: str = 'cpu', model=None, clean_dataset=None, poison_rate: float = 0.05, lr: float = 0.1, target_label=2, epochs: int = 20, batch_size: int = 64, optimizer: str = None, criterion=torch.nn.CrossEntropyLoss(),
+    def __init__(self, tag: str = 'CustomModel', device: str = 'cpu', model=None, clean_dataset=None,data_download_path=None, poison_rate: float = 0.05, lr: float = 0.1, target_label=2, epochs: int = 20, batch_size: int = 64, optimizer: str = None, criterion=torch.nn.CrossEntropyLoss(),
                  local_model_path: str = None):
-        self.data_path = project_data_path
+        if data_download_path is not None:
+            self.data_path = data_download_path
+        else:
+            self.data_path=project_data_path
         self.device = torch.device(device) if device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model_path = "checkpoints/" + datetime.now().strftime("%Y%m%d-%H%M%S-") + tag + ".pth"
         if isinstance(clean_dataset, str):

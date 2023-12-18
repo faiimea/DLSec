@@ -19,7 +19,7 @@
 
 ## Test
 ```shell
-python ./src/test.py
+python ./Adv_Sample/test.py
 ```
 目前test.py默认使用FGSM算法
 在调整算法时，需要手动修改
