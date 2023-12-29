@@ -23,11 +23,12 @@ class BackdoorDefense():
         self.X=org_img
         self.Y=org_label
         self.NC = NeuralCleanse(X=org_img, Y=org_label, model=model, num_samples=25, path=self.path)
-    def run(self,alreadyreverse=False):
+    def run(self,testset,alreadyreverse=False):
         if not alreadyreverse:
             self.NC.reverse_engineer_triggers()
         self.NC.draw_all_triggers()
         self.NC.backdoor_detection()
+
 
 
 if __name__ == "__main__":

@@ -6,6 +6,8 @@ from torchvision import transforms, datasets
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score
 
+from utils.transform import build_transform
+
 '''
 tag:保存模型时命名备注
 device:计算设备
@@ -37,31 +39,31 @@ def to_float_tensor(image):
     return image.float()
 
 
-def build_transform(mode, isTensor=False):
-    transform = transforms.Compose([])
-    if not isTensor:
-        transform.transforms.append(transforms.ToTensor())
-    transform.transforms.append(transforms.Lambda(to_float_tensor))
-    if len(mode) == 3 and mode[2] == 3:
-        mean, std = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
-        channels = 3
-    elif len(mode) == 2:
-        mean, std = (0.5,), (0.5,)
-        channels = 1
-        if isTensor:
-            transform.transforms.append(transforms.Lambda(lambda x: x.unsqueeze(0)))
-    elif len(mode) == 3 and mode[2] == 4:
-        mean, std = (0.5, 0.5, 0.5, 0.5), (0.5, 0.5, 0.5, 0.5)
-        channels = 4
-    else:
-        raise NotImplementedError()
-
-    transform.transforms.append(transforms.Normalize(mean, std))
-
-    mean = torch.as_tensor(mean)
-    std = torch.as_tensor(std)
-    detransform = transforms.Normalize((-mean / std).tolist(), (1.0 / std).tolist())
-    return transform, detransform, channels
+# def build_transform(mode, isTensor=False):
+#     transform = transforms.Compose([])
+#     if not isTensor:
+#         transform.transforms.append(transforms.ToTensor())
+#     transform.transforms.append(transforms.Lambda(to_float_tensor))
+#     if len(mode) == 3 and mode[2] == 3:
+#         mean, std = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
+#         channels = 3
+#     elif len(mode) == 2:
+#         mean, std = (0.5,), (0.5,)
+#         channels = 1
+#         if isTensor:
+#             transform.transforms.append(transforms.Lambda(lambda x: x.unsqueeze(0)))
+#     elif len(mode) == 3 and mode[2] == 4:
+#         mean, std = (0.5, 0.5, 0.5, 0.5), (0.5, 0.5, 0.5, 0.5)
+#         channels = 4
+#     else:
+#         raise NotImplementedError()
+#
+#     transform.transforms.append(transforms.Normalize(mean, std))
+#
+#     mean = torch.as_tensor(mean)
+#     std = torch.as_tensor(std)
+#     detransform = transforms.Normalize((-mean / std).tolist(), (1.0 / std).tolist())
+#     return transform, detransform, channels
 
 
 def train_one_epoch(data_loader, model, optimizer, criterion, device):
@@ -111,12 +113,9 @@ def evaluate_model(clean_test_data, poisoned_test_data, model, criterion, device
 
 
 class BackdoorAttack:
-    def __init__(self, tag: str = 'CustomModel', device: str = 'cpu', model=None, clean_dataset=None,data_download_path=None, poison_rate: float = 0.05, lr: float = 0.1, target_label=2, epochs: int = 20, batch_size: int = 64, optimizer: str = None, criterion=torch.nn.CrossEntropyLoss(),
-                 local_model_path: str = None):
-        if data_download_path is not None:
-            self.data_path = data_download_path
-        else:
-            self.data_path=project_data_path
+    def __init__(self, tag: str = 'CustomModel', device: str = 'cpu', model=None, clean_dataset=None, poison_rate: float = 0.05, lr: float = 0.1, target_label=2, epochs: int = 20, batch_size: int = 64, optimizer: str = None, criterion=torch.nn.CrossEntropyLoss(),
+                 local_state_path: str = None):
+        self.data_path = project_data_path
         self.device = torch.device(device) if device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model_path = "checkpoints/" + datetime.now().strftime("%Y%m%d-%H%M%S-") + tag + ".pth"
         if isinstance(clean_dataset, str):
@@ -125,20 +124,20 @@ class BackdoorAttack:
         else:
             self.clean_traindata = clean_dataset(self.data_path, train=True, download=True)
             self.clean_testdata = clean_dataset(self.data_path, train=False, download=True)
-        self.poisondata_isTensor=isinstance(self.clean_traindata.data[0], torch.Tensor)
-        self.cleandata_isTensor=isinstance(self.clean_testdata[0], torch.Tensor)
+        self.poisondata_isTensor = isinstance(self.clean_traindata.data[0], torch.Tensor)
+        self.cleandata_isTensor = isinstance(self.clean_testdata[0], torch.Tensor)
         self.transform, self.detransform, self.channels = build_transform(self.clean_traindata.data.shape[1:], self.poisondata_isTensor)
         self.data_shape = self.clean_traindata.data.shape[1:]
 
         self.clean_traindata.transform = self.transform
-        self.clean_testdata.transform,_,_ = build_transform(self.clean_testdata.data.shape[1:],self.cleandata_isTensor)
+        self.clean_testdata.transform, _, _ = build_transform(self.clean_testdata.data.shape[1:], self.cleandata_isTensor)
 
-        if local_model_path is not None:
-            print("Loading local model {", local_model_path, "}")
-            self.model = torch.load("./LocalModels/" + local_model_path).to(self.device)
-            self.model_path = "checkpoints/" + local_model_path
-        else:
-            self.model = model.to(self.device)
+        self.model = model.to(self.device)
+        if local_state_path is not None:
+            print("Loading local model state {", local_state_path, "}")
+            self.model.load_state_dict(torch.load("./LocalModels/" + local_state_path))
+            self.model_path = "checkpoints/" + local_state_path
+
         self.poison_rate = poison_rate
         self.lr = lr
         self.target_label = target_label
