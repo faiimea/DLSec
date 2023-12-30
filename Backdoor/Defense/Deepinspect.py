@@ -109,7 +109,7 @@ def test_clean(model, source_loader, device):
     return acc.item()
 
 
-def detect_triger(gen, device, alpha=0.05):
+def detect_triger(gen, device, alpha=0.02):
     noise = torch.randn((100, 100)).to(device)
     trigger_perturbations = []
     for target_class in range(10):
@@ -128,7 +128,7 @@ def detect_triger(gen, device, alpha=0.05):
     # 计算左子组中数据点与组中位数的绝对偏差
 
     # 计算触发器扰动的标准差估计值
-    mad = 1.4826 * np.median([x for (i, x) in left_subgroup])
+    mad = 1.4826 * np.median(np.abs(trigger_perturbations - median), axis=0)
     # 计算假设测试的显著性水平（α）alpha
 
     # 根据显著性水平计算截断阈值（c）
@@ -144,15 +144,34 @@ def detect_triger(gen, device, alpha=0.05):
         return None
 
 
-def train_gen(gen, model, epoch, dataloader, device, threshold=500, generator_path=None):
-    for epoch in range(1, epoch + 1):
-        optimizer = torch.optim.Adam(gen.parameters(), lr=1e-4)
-        NLLLoss = nn.NLLLoss()
-        MSELoss = nn.MSELoss()
+def train_gen(gen, model, epoch, dataloader, device, threshold=100, generator_path=None):
+    model.eval()
+    all_label = []
+    all_img = {}
+    patience = 10
+    noimpovement = 0
+    bestloss = float("inf")
+    for img, label in all_dataset:
+        if label not in all_label:
+            all_img[label] = img
+            all_label.append(label)
+        if len(all_label) == 10:
+            all_label = torch.tensor(all_label).to(device)
+            all_img = list(all_img.values())  # 获取字典中的张量值列表
+            all_img = torch.stack(all_img).to(device)
+            break
+    for epoch in range(1, epochs + 1):
         gen.train()
+        optimizer = torch.optim.Adam(gen.parameters(), lr=1e-2)
+        lamda1 = 0.6
+        lamda2 = 0.3
+        NLLLoss = nn.NLLLoss(reduction='sum')
+        MSELoss = nn.MSELoss(reduction='sum')
+        logsoftmax = nn.LogSoftmax(dim=1)
         Loss_sum = 0
         L_trigger_sum = 0
         L_pert_sum = 0
+        L_Gan_sum = 0
         count_sum = 0
         for i, (img, ori_label) in enumerate(dataloader):
             label = torch.randint(low=0, high=10, size=(img.shape[0],))
@@ -161,23 +180,40 @@ def train_gen(gen, model, epoch, dataloader, device, threshold=500, generator_pa
             noise = torch.randn((img.shape[0], 100)).to(device)
             G_out = gen(one_hot_label, noise)
             D_out = model(img + G_out)
+            sorted_img = torch.empty_like(img)
+            # 遍历 label 中的每个值
+            for i, target in enumerate(label):
+                # 在 ori_label 中找到等于 target 的位置
+                indices = torch.nonzero(all_label == target).squeeze().item()
+                sorted_img[i] = all_img[indices]
+            ori_out = model(sorted_img)
+            D_out = logsoftmax(D_out)
             L_trigger = NLLLoss(D_out, label)
-            G_out_norm = torch.norm(G_out, p=1) / img.shape[0] - threshold
+            G_out_norm = torch.sum(torch.abs(G_out)) / img.shape[0] - threshold
             L_pert = torch.max(torch.zeros_like(G_out_norm), G_out_norm)
             accuracy = torch.softmax(D_out, dim=1)
-            L_Gan = MSELoss(accuracy, torch.nn.functional.one_hot(label, 10).to(torch.float32))
-            Loss = L_trigger + 0.2 * L_pert + 0.3 * L_Gan
+            ori_accuary = torch.softmax(ori_out, dim=1)
+            L_Gan = MSELoss(accuracy, ori_accuary)
+            Loss = L_trigger + lamda1 * L_pert + lamda2 * L_Gan
             optimizer.zero_grad()
-
+            if Loss < bestloss:
+                bestloss = Loss
+            else:
+                noimpovement += 1
+            if noimpovement > patience:
+                noimpovement = 0
+                patience *= 2
+                for param_group in optimizer.param_groups:
+                    param_group['lr'] /= 10
             Loss.backward()
             optimizer.step()
             Loss_sum += Loss.item()
             L_trigger_sum += L_trigger.item()
             L_pert_sum += L_pert.item()
+            L_Gan_sum += L_Gan.item()
             count_sum += 1
         print(
-            f'Epoch-{epoch}: Loss={round(Loss_sum / count_sum, 3)}, L_trigger={round(L_trigger_sum / count_sum, 3)}, L_pert={round(L_pert_sum / count_sum, 3)}')
-    torch.save(gen.state_dict(), generator_path)
+            f'Epoch-{epoch}: Loss={round(Loss_sum / count_sum, 3)}, L_trigger={round(L_trigger_sum / count_sum, 3)}, L_pert={round(L_pert_sum / count_sum, 3)}, L_Gan={round(L_Gan_sum / count_sum, 3)}')
 
 
 def deepinspect(model, train_dataloader, tag, generator_path=None, load_generator=False):

@@ -2,7 +2,7 @@
 <module type="PYTHON_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$" />
-    <orderEntry type="jdk" jdkName="Python 3.8 (ai)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.10 (venv)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PackageRequirementsSettings">
@@ -16,6 +16,9 @@
     <option name="namespacePackageFolders">
       <list>
         <option value="$MODULE_DIR$/Backdoor" />
+        <option value="$MODULE_DIR$/Datapoison" />
+        <option value="$MODULE_DIR$/utils" />
+        <option value="$MODULE_DIR$/Adv_Sample" />
       </list>
     </option>
   </component>
