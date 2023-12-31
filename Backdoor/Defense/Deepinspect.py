@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as transforms
-from torchvision.datasets import CIFAR10, MNIST
 from torch.utils.data import DataLoader
 import numpy as np
 from torchvision.utils import save_image
@@ -123,12 +122,15 @@ def detect_triger(gen, device, alpha=0.02):
     # 计算触发器扰动的中位数
     median = np.median(trigger_perturbations)
 
+    # 计算左子组中数据点与组中位数的绝对偏差
     left_subgroup = [(i, median - x) for i, x in enumerate(trigger_perturbations) if x < median]
 
-    # 计算左子组中数据点与组中位数的绝对偏差
+
 
     # 计算触发器扰动的标准差估计值
     mad = 1.4826 * np.median(np.abs(trigger_perturbations - median), axis=0)
+    # 鬼知道总体偏差是哪个值
+    # mad = 1.4826 * np.std([item[1] for item in left_subgroup])
     # 计算假设测试的显著性水平（α）alpha
 
     # 根据显著性水平计算截断阈值（c）
@@ -151,7 +153,7 @@ def train_gen(gen, model, epoch, dataloader, device, threshold=100, generator_pa
     patience = 10
     noimpovement = 0
     bestloss = float("inf")
-    for img, label in all_dataset:
+    for img, label in dataloader.dataset:
         if label not in all_label:
             all_img[label] = img
             all_label.append(label)
@@ -160,7 +162,7 @@ def train_gen(gen, model, epoch, dataloader, device, threshold=100, generator_pa
             all_img = list(all_img.values())  # 获取字典中的张量值列表
             all_img = torch.stack(all_img).to(device)
             break
-    for epoch in range(1, epochs + 1):
+    for i in range(1, epoch + 1):
         gen.train()
         optimizer = torch.optim.Adam(gen.parameters(), lr=1e-2)
         lamda1 = 0.6
