@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 
-from base import Attack
-
+# from base import Attack
+from Adversarial.base import Attack
 
 class FGSM(Attack):
 
