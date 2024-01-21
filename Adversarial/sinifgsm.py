@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from base import Attack
+from Adversarial.base import Attack
 
 
 class SINIFGSM(Attack):

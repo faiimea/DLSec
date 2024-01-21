@@ -51,9 +51,7 @@ def dataset_preprocess(name, batch_size=64):
 
     return DataLoader(train_dataset, batch_size=batch_size, shuffle=True), DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-'''
-!!! HERE 注释掉了我不用的部分，后面补回来，再删掉这个注释
-'''
+
 def run_test_on_model(Model2BeEvaluated, adversarial_method, allow_backdoor_defense, backdoor_method, datapoison_method, run_datapoison_reinforcement, datapoison_reinforce_method, train_dataloader=None, test_dataloader=None, params=None):
     adversarial_rst = adversarial_test(Model2BeEvaluated, adversarial_method, test_dataloader, params)
     isBackdoored, backdoor_rst, ReinforcedModel_dict_path = backdoor_detect_and_defense(allow_defense=allow_backdoor_defense, Model2BeEvaluated=Model2BeEvaluated, method=backdoor_method, train_dataloader=train_dataloader, params=params)
