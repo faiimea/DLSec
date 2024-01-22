@@ -3,7 +3,7 @@ import torchvision
 import cv2
 import os
 from torch.utils.data import DataLoader
-from Adv_Sample import *
+from Adversarial.adversarial_api import adversarial_attack
 from Backdoor.backdoor_defense_api import run_backdoor_defense
 from Datapoison.Defense import *
 from utils.transform import build_transform
@@ -14,7 +14,6 @@ from Datapoison.Defense.Friendly_noise import *
 
 def ModelEvaluation(evaluation_params=None):
     """
-
     @param params: 其它参数
     @param model: 待测模型
     @param adversarial_method:
@@ -50,11 +49,11 @@ def dataset_preprocess(name, batch_size=64):
     train_dataset.transform = transform
     test_dataset.transform = transform
 
-    return DataLoader(train_dataset, batch_size=batch_size, shuffle=True), DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+    return DataLoader(train_dataset, batch_size=batch_size, shuffle=True), DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 
 def run_test_on_model(Model2BeEvaluated, adversarial_method, allow_backdoor_defense, backdoor_method, datapoison_method, run_datapoison_reinforcement, datapoison_reinforce_method, train_dataloader=None, test_dataloader=None, params=None):
-    adversarial_rst = adversarial_test(Model2BeEvaluated, adversarial_method, train_dataloader, params)
+    adversarial_rst = adversarial_test(Model2BeEvaluated, adversarial_method, test_dataloader, params)
     isBackdoored, backdoor_rst, ReinforcedModel_dict_path = backdoor_detect_and_defense(allow_defense=allow_backdoor_defense, Model2BeEvaluated=Model2BeEvaluated, method=backdoor_method, train_dataloader=train_dataloader, params=params)
     isPoisoned, datapoison_test_rst = datapoison_test(Model2BeEvaluated=Model2BeEvaluated, method=None, train_dataloader=train_dataloader, params=None)
     if run_datapoison_reinforcement:
@@ -70,12 +69,13 @@ def run_test_on_model(Model2BeEvaluated, adversarial_method, allow_backdoor_defe
     process_result(adversarial_rst, backdoor_rst, datapoison_test_rst, datapoison_defense_rst)
     return isBackdoored, isPoisoned
 
-
+'''
+在此调用对抗攻击测试方法，传入待测模型、攻击方式、数据集（如果指定了）等用户设置的参数，返回测试结果：【原始与对抗样本准确率、准确率差，准确率降低一定比例（如50%）时对抗样本与原始样本差异度（p阶范数距离），】
+进阶指标：【对抗样本对噪声容忍度，高斯模糊鲁棒性，图像压缩鲁棒性，生成对抗样本所需时间】
+'''
 def adversarial_test(Model2BeEvaluated, method='fgsm', train_dataloader=None, params=None):
     adversarial_rst = None
-    '''在此调用对抗攻击测试方法，传入待测模型、攻击方式、数据集（如果指定了）等用户设置的参数，返回测试结果：【原始与对抗样本准确率、准确率差，准确率降低一定比例（如50%）时对抗样本与原始样本差异度（p阶范数距离），】
-        进阶指标：【对抗样本对噪声容忍度，高斯模糊鲁棒性，图像压缩鲁棒性，生成对抗样本所需时间】
-    '''
+    adversarial_attack(Model2BeEvaluated,method,train_dataloader,params)
     return adversarial_rst
 
 

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as f
 
-from base import Attack
+from Adversarial.base import Attack
 
 
 class DIFGSM(Attack):
