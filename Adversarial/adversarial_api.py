@@ -9,6 +9,8 @@ import cv2
 import io
 import time
 from tqdm import tqdm  # Import tqdm for creating progress bars
+from tabulate import tabulate
+
 
 from Adversarial.fgsm import FGSM
 from Adversarial.pgd import PGD
@@ -19,8 +21,6 @@ from Adversarial.sinifgsm import SINIFGSM
 from Adversarial.tifgsm import TIFGSM
 from Adversarial.vmifgsm import VMIFGSM
 from Adversarial.vnifgsm import VNIFGSM
-
-
 
 
 # Hyberpara
@@ -74,13 +74,11 @@ def apply_gaussian_blur(image, radius=2):
     """
     blurred_images = []
     for i in range(image.shape[0]):  # 遍历 batch 中的每张图像
-        image_tensor = image[i].squeeze(0)  # 去除单一的 batch 维度
+        image_tensor = image[i].squeeze(0)  
         image_pil = transforms.ToPILImage()(image_tensor)
         blurred_image_pil = image_pil.filter(ImageFilter.GaussianBlur(radius=radius))
         blurred_image = transforms.ToTensor()(blurred_image_pil)
         blurred_images.append(blurred_image)
-
-    # 将处理后的图像转换为张量，并在第一个维度上堆叠，形成 batch
     blurred_images = torch.stack(blurred_images, dim=0)
     return blurred_images
 
@@ -91,22 +89,18 @@ def compress_image(image, quality=85):
     """
     compressed_images = []
     for i in range(image.shape[0]):  # 遍历 batch 中的每张图像
-        image_tensor = image[i].squeeze(0)  # 去除单一的 batch 维度
+        image_tensor = image[i].squeeze(0)  
         image_pil = transforms.ToPILImage()(image_tensor)
-        
-        # 压缩图像
         buffer = io.BytesIO()
         image_pil.save(buffer, format='JPEG', quality=quality)
         compressed_image_pil = Image.open(buffer)
         compressed_image = transforms.ToTensor()(compressed_image_pil)
-        
         compressed_images.append(compressed_image)
-
     compressed_images = torch.stack(compressed_images, dim=0)
     
     return compressed_images
 
-def test_acc_new(model, testloader, test_images, n_image = 448, save_test_images = False):
+def test_acc(model, testloader, test_images, n_image = 448, save_test_images = False,batch_size=64):
         correct = 0
         total = 0
         p_labels = []
@@ -127,7 +121,7 @@ def test_acc_new(model, testloader, test_images, n_image = 448, save_test_images
 
                     # Here change batchsize !!!
                     p_labels.append(predicted)
-                    if predicted[total%64] == j:
+                    if predicted[total%batch_size] == j:
                         correct += 1
                     total += 1
                 i += 1
@@ -135,8 +129,8 @@ def test_acc_new(model, testloader, test_images, n_image = 448, save_test_images
                 break
             
         test_accuracy = (100.0 * correct / total)
-        print('Accuracy of the network on the', total, "images is: ", test_accuracy, '%')
-        print("Saving test images = ", save_test_images)
+        # print('Accuracy of the network on the', total, "images is: ", test_accuracy, '%')
+        # print("Saving test images = ", save_test_images)
         if save_test_images == True:
             return test_accuracy, p_labels, saved_img
         else:
@@ -155,7 +149,6 @@ def plot_ACC(epsilons,test_accuracy,accuracies):
 
 
 def adversarial_attack(model=None,method="fgsm", train_dataloader=None, params=None):
-    print('atk_start')
     if model is None:
         model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
     
@@ -176,9 +169,6 @@ def adversarial_attack(model=None,method="fgsm", train_dataloader=None, params=N
             org_img.append(images)
             org_labels.append(labels)
 
-    '''
-    TODO 图片高斯噪声 图片高斯模糊 图片压缩鲁棒
-    '''
     print('Noise start')
     noisy_images = [add_gaussian_noise(img) for img in org_img]
     print('Blurred start')
@@ -199,11 +189,11 @@ def adversarial_attack(model=None,method="fgsm", train_dataloader=None, params=N
     
     data_scale=mt
 
-    test_accuracy, resnet56_labels, orig = test_acc_new(model, testloader, org_img, data_scale, True)
+    test_accuracy, resnet56_labels, orig = test_acc(model, testloader, org_img, data_scale, True)
 
     # epsilons=[0.005,0.01,0.02,0.05,0.1]
-    epsilons=[0.005]
-
+    epsilons=[0.005,0.01]
+    table_data = []
     progress_bar = tqdm(total=4*len(epsilons), desc="Generating Adversarial Examples")
     accuracies=[]
     accuracies_noisy=[]
@@ -257,10 +247,12 @@ def adversarial_attack(model=None,method="fgsm", train_dataloader=None, params=N
             attack_img_compressed.append(attack(compressed_images[i], org_labels[i]))
         progress_bar.update(1)
         print(elapsed_time)
-        atk_test_accuracy, atk_labels, a_images = test_acc_new(model, testloader, attack_img, mt, True)
-        atk_test_accuracy_noisy, _, _ = test_acc_new(model, testloader, attack_img_noisy, mt, True)
-        atk_test_accuracy_blurred, _, _ = test_acc_new(model, testloader, attack_img_blurred, mt, True)
-        atk_test_accuracy_compressed, _, _ = test_acc_new(model, testloader, attack_img_compressed, mt, True)
+        atk_test_accuracy, atk_labels, a_images = test_acc(model, testloader, attack_img, mt, True)
+        atk_test_accuracy_noisy, _, _ = test_acc(model, testloader, attack_img_noisy, mt, True)
+        atk_test_accuracy_blurred, _, _ = test_acc(model, testloader, attack_img_blurred, mt, True)
+        atk_test_accuracy_compressed, _, _ = test_acc(model, testloader, attack_img_compressed, mt, True)
+        table_data.append([eps, atk_test_accuracy, atk_test_accuracy_noisy, atk_test_accuracy_blurred,
+                           atk_test_accuracy_compressed, elapsed_time])
         dataiter = iter(testloader)
         images, labels = dataiter.next()
         accuracies.append(atk_test_accuracy)
@@ -268,6 +260,9 @@ def adversarial_attack(model=None,method="fgsm", train_dataloader=None, params=N
         accuracies_blurred.append(atk_test_accuracy_blurred)
         accuracies_compressed.append(atk_test_accuracy_compressed)
         atk_examples.append(a_images)
+    headers = ["Epsilon", "ACC", "Noisy ACC", "Blurred ACC", "Compressed ACC", "Time (seconds)"]
+    print(tabulate(table_data, headers=headers, tablefmt="fancy_grid"))
+
 
 
     # Visualize
@@ -275,6 +270,86 @@ def adversarial_attack(model=None,method="fgsm", train_dataloader=None, params=N
     # plot_ACC(epsilons,test_accuracy,accuracies_noisy)
     # plot_ACC(epsilons,test_accuracy,accuracies_blurred)
     # plot_ACC(epsilons,test_accuracy,accuracies_compressed)
+
+def adversarial_mutiple_attack(model=None, train_dataloader=None, params=None):
+    if model is None:
+        model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
+    
+    #print(model)
+    use_cuda = True
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    if train_dataloader is None:
+        testloader=dataset_preprocess()
+    else:
+        testloader=train_dataloader
+
+    org_img = []
+    org_labels = []
+    with torch.no_grad():
+        for data in testloader:
+            images, labels = data
+            org_img.append(images)
+            org_labels.append(labels)
+
+    # Small test
+    st = 100
+    # Midium test
+    mt = 400
+    # Large test
+    lt = 1000
+    # Full test
+    ft = 2500
+    
+    data_scale=st
+
+    test_accuracy, resnet56_labels, orig = test_acc(model, testloader, org_img, data_scale, True)
+
+    # epsilons=[0.005,0.01,0.02,0.05,0.1]
+    epsilons=[0.005]
+    table_data = []
+    accuracies=[]
+    attack_methods=['fgsm', 'pgd', 'difgsm', 'mifgsm', 'nifgsm', 'sinifgsm', 'tifgsm', 'vmifgsm', 'vnifgsm']
+    progress_bar = tqdm(total=len(attack_methods)*len(epsilons), desc="Generating Adversarial Examples")
+    for eps in epsilons:
+        for method in attack_methods:
+            if method == 'fgsm':
+                attack = FGSM(model, eps=eps)
+            elif method == 'pgd':
+                attack = PGD(model, eps=eps)
+            elif method == 'difgsm':
+                attack = DIFGSM(model, eps=eps)
+            elif method == 'mifgsm':
+                attack = MIFGSM(model, eps=eps)
+            elif method == 'nifgsm':
+                attack = NIFGSM(model, eps=eps)
+            elif method == 'sinifgsm':
+                attack = SINIFGSM(model, eps=eps)
+            elif method == 'tifgsm':
+                attack = TIFGSM(model, eps=eps)
+            elif method == 'vmifgsm':
+                attack = VMIFGSM(model, eps=eps)
+            elif method == 'vnifgsm':
+                attack = VNIFGSM(model, eps=eps)
+
+            count = 0
+            start_time = time.time()  # 记录开始时间
+            attack_img = []
+            for i in range(len(org_img)):
+                attack_img.append(attack(org_img[i], org_labels[i]))
+            elapsed_time = time.time() - start_time
+            progress_bar.update(1)
+            atk_test_accuracy, _, _ = test_acc(model, testloader, attack_img, data_scale, True)
+
+            table_data.append([eps, method, atk_test_accuracy, elapsed_time])
+            dataiter = iter(testloader)
+            images, labels = dataiter.next()
+
+    headers = ["Epsilon", "Attack Method", "ACC", "Time (seconds)"]
+    print(tabulate(table_data, headers=headers, tablefmt="fancy_grid"))
+
+def robust_test():
+    pass
 
 if __name__ == '__main__':
 

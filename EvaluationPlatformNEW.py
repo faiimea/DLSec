@@ -4,6 +4,7 @@ import cv2
 import os
 from torch.utils.data import DataLoader
 from Adversarial.adversarial_api import adversarial_attack
+from Adversarial.adversarial_api import adversarial_mutiple_attack
 from Backdoor.backdoor_defense_api import run_backdoor_defense
 from Datapoison.Defense import *
 from utils.transform import build_transform
@@ -74,8 +75,10 @@ def run_test_on_model(Model2BeEvaluated, adversarial_method, allow_backdoor_defe
 进阶指标：【对抗样本对噪声容忍度，高斯模糊鲁棒性，图像压缩鲁棒性，生成对抗样本所需时间】
 '''
 def adversarial_test(Model2BeEvaluated, method='fgsm', train_dataloader=None, params=None):
+    print("开始对抗样本检测")
     adversarial_rst = None
     adversarial_attack(Model2BeEvaluated,method,train_dataloader,params)
+    adversarial_mutiple_attack(Model2BeEvaluated,train_dataloader,params)
     return adversarial_rst
 
 
