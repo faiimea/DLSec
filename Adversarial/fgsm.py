@@ -16,9 +16,7 @@ class FGSM(Attack):
         self.lossfn = nn.CrossEntropyLoss()
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-
         delta = torch.zeros_like(x, requires_grad=True)
-
         outs = self.model(x + delta)
         loss = self.lossfn(outs, y)
 

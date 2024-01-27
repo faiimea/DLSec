@@ -9,7 +9,8 @@ import torchvision
 import torchvision.datasets
 
 
-def run_backdoor_defense(allow_defense=True, model=None, method="DeepInspect", train_dataloader=None, params=None):
+def run_backdoor_defense(allow_defense=True, model=None, method="NeuralCleanse", train_dataloader=None, params=None):
+
     if method == 'NeuralCleanse':
         bdd = BackdoorDefense(dataloader=train_dataloader, model=model, triggerpath="./Backdoor/Defense/" + method + datetime.now().strftime("-%Y%m%d-%H%M%S") + ".pth")
         bdd.run()

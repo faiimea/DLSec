@@ -54,7 +54,8 @@ def dataset_preprocess(name, batch_size=64):
 
 
 def run_test_on_model(Model2BeEvaluated, adversarial_method, allow_backdoor_defense, backdoor_method, datapoison_method, run_datapoison_reinforcement, datapoison_reinforce_method, train_dataloader=None, test_dataloader=None, params=None):
-    adversarial_rst = adversarial_test(Model2BeEvaluated, adversarial_method, test_dataloader, params)
+    # adversarial_rst = adversarial_test(Model2BeEvaluated, adversarial_method, test_dataloader, params)
+    adversarial_rst =None
     isBackdoored, backdoor_rst, ReinforcedModel_dict_path = backdoor_detect_and_defense(allow_defense=allow_backdoor_defense, Model2BeEvaluated=Model2BeEvaluated, method=backdoor_method, train_dataloader=train_dataloader, params=params)
     isPoisoned, datapoison_test_rst = datapoison_test(Model2BeEvaluated=Model2BeEvaluated, method=None, train_dataloader=train_dataloader, params=None)
     if run_datapoison_reinforcement:
@@ -75,10 +76,29 @@ def run_test_on_model(Model2BeEvaluated, adversarial_method, allow_backdoor_defe
 进阶指标：【对抗样本对噪声容忍度，高斯模糊鲁棒性，图像压缩鲁棒性，生成对抗样本所需时间】
 '''
 def adversarial_test(Model2BeEvaluated, method='fgsm', train_dataloader=None, params=None):
-    print("开始对抗样本检测")
-    adversarial_rst = None
-    adversarial_attack(Model2BeEvaluated,method,train_dataloader,params)
-    adversarial_mutiple_attack(Model2BeEvaluated,train_dataloader,params)
+    """
+
+    @param Model2BeEvaluated:
+    @param method:
+    @param train_dataloader:
+    @param params:
+    @return: 一个字典，键形如’ACC-0.005‘，’fgsm-0.005‘，值为相应准确率
+    """
+    adversarial_rst={}
+    print("开始图像鲁棒性检测")
+    perturb_rst = adversarial_attack(Model2BeEvaluated,method,train_dataloader,params)
+    for ep_rst in perturb_rst:
+        ep=ep_rst[0]
+        adversarial_rst["ACC-"+str(ep)]=ep_rst[1]
+        adversarial_rst["NoisyACC-" + str(ep)] = ep_rst[2]
+        adversarial_rst["BlurredACC-" + str(ep)] = ep_rst[3]
+        adversarial_rst["CompressedACC-" + str(ep)] = ep_rst[4]
+
+    print("开始多方法对抗样本测试")
+    adv_rst=adversarial_mutiple_attack(Model2BeEvaluated,train_dataloader,params)
+    for method_rst in adv_rst:
+        ep=method_rst[0]
+        adversarial_rst[str(method_rst[1])+'-'+str(ep)]=method_rst[2]
     return adversarial_rst
 
 

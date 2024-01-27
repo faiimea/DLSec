@@ -21,7 +21,7 @@ FRIENDLYNOISE_config = {
 evaluation_params = {
     'model': model,
     'adversarial_method': 'fgsm',
-    'backdoor_method': 'DeepInspect',
+    'backdoor_method': 'NeuralCleanse',
     'allow_backdoor_defense': True,
     'datapoison_method': None,
     'datapoison_reinforce_method': 'FriendlyNoise',

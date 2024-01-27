@@ -254,7 +254,7 @@ def adversarial_attack(model=None,method="fgsm", train_dataloader=None, params=N
         table_data.append([eps, atk_test_accuracy, atk_test_accuracy_noisy, atk_test_accuracy_blurred,
                            atk_test_accuracy_compressed, elapsed_time])
         dataiter = iter(testloader)
-        images, labels = dataiter.next()
+        images, labels = next(dataiter)
         accuracies.append(atk_test_accuracy)
         accuracies_noisy.append(atk_test_accuracy_noisy)
         accuracies_blurred.append(atk_test_accuracy_blurred)
@@ -262,6 +262,7 @@ def adversarial_attack(model=None,method="fgsm", train_dataloader=None, params=N
         atk_examples.append(a_images)
     headers = ["Epsilon", "ACC", "Noisy ACC", "Blurred ACC", "Compressed ACC", "Time (seconds)"]
     print(tabulate(table_data, headers=headers, tablefmt="fancy_grid"))
+    return table_data
 
 
 
@@ -314,23 +315,23 @@ def adversarial_mutiple_attack(model=None, train_dataloader=None, params=None):
     for eps in epsilons:
         for method in attack_methods:
             if method == 'fgsm':
-                attack = FGSM(model, eps=eps)
+                attack = FGSM(model, eps=eps,device=params['device'])
             elif method == 'pgd':
-                attack = PGD(model, eps=eps)
+                attack = PGD(model, eps=eps,device=params['device'])
             elif method == 'difgsm':
-                attack = DIFGSM(model, eps=eps)
+                attack = DIFGSM(model, eps=eps,device=params['device'])
             elif method == 'mifgsm':
-                attack = MIFGSM(model, eps=eps)
+                attack = MIFGSM(model, eps=eps,device=params['device'])
             elif method == 'nifgsm':
-                attack = NIFGSM(model, eps=eps)
+                attack = NIFGSM(model, eps=eps,device=params['device'])
             elif method == 'sinifgsm':
-                attack = SINIFGSM(model, eps=eps)
+                attack = SINIFGSM(model, eps=eps,device=params['device'])
             elif method == 'tifgsm':
-                attack = TIFGSM(model, eps=eps)
+                attack = TIFGSM(model, eps=eps,device=params['device'])
             elif method == 'vmifgsm':
-                attack = VMIFGSM(model, eps=eps)
+                attack = VMIFGSM(model, eps=eps,device=params['device'])
             elif method == 'vnifgsm':
-                attack = VNIFGSM(model, eps=eps)
+                attack = VNIFGSM(model, eps=eps,device=params['device'])
 
             count = 0
             start_time = time.time()  # 记录开始时间
@@ -343,7 +344,7 @@ def adversarial_mutiple_attack(model=None, train_dataloader=None, params=None):
 
             table_data.append([eps, method, atk_test_accuracy, elapsed_time])
             dataiter = iter(testloader)
-            images, labels = dataiter.next()
+            images, labels = next(dataiter)
 
     headers = ["Epsilon", "Attack Method", "ACC", "Time (seconds)"]
     print(tabulate(table_data, headers=headers, tablefmt="fancy_grid"))

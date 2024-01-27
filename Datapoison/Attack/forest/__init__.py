@@ -1,8 +1,8 @@
 """Library of simple routines."""
 
-from forest.witchcoven import Witch
-from forest.data import Kettle, KettleExternal
-from forest.victims import Victim
+from Datapoison.Attack.forest.witchcoven import Witch
+from Datapoison.Attack.forest.data import Kettle, KettleExternal
+from Datapoison.Attack.forest.victims import Victim
 
 from .options import options
 

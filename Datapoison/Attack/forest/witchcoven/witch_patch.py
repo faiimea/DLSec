@@ -4,7 +4,7 @@ import torch
 import torchvision
 from PIL import Image
 from ..consts import BENCHMARK
-from forest.data import datasets
+from Datapoison.Attack.forest.data import datasets
 torch.backends.cudnn.benchmark = BENCHMARK
 
 from .witch_base import _Witch
