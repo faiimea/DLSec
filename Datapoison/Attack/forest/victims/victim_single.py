@@ -37,7 +37,7 @@ class _VictimSingle(_VictimBase):
         # self.model, self.defs, self.optimizer, self.scheduler = self._initialize_model(self.args['local_model'],
         #     self.args['optimizer'], pretrain=pretrain)
         self.model, self.optimizer, self.scheduler = self._initialize_model(self.args['local_model'],
-            self.args['optimizer'], self.args['lr'], self.args['weight_decay'], self.args['epochs'])
+            self.args['optimizer'], self.args['lr'], self.args['weight_decay'], self.args['epochs'], self.args['pretrained'])
 
         self.model.to(**self.setup)
         if torch.cuda.device_count() > 1:

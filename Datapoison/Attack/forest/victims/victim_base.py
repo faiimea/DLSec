@@ -129,7 +129,8 @@ class _VictimBase:
                 print('Linear layer reinitialized to initial seed.')
 
             # Train new model
-            run_stats.append(self._iterate(kettle, poison_delta=poison_delta, max_epoch=1))
+            run_stats.append(self._iterate(kettle, poison_delta=poison_delta, max_epoch=self.args['epochs']))
+            print(run_stats)
         return average_dicts(run_stats)
 
     def eval(self, dropout=True):
@@ -144,9 +145,9 @@ class _VictimBase:
         """Step through a model epoch to in turn minimize target loss."""
         raise NotImplementedError()
 
-    def _initialize_model(self, local_model, optimizer, lr, weight_decay, epochs):
+    def _initialize_model(self, local_model, optimizer, lr, weight_decay, epochs, frozen):
         model = local_model     # 本来是从models.py里，get_model()函数返回的model，作者又封装了一遍……麻了
-        model.frozen = False    # 貌似只是个标记
+        model.frozen = frozen    # 貌似只是个标记
         # Define training routine
         # defs = training_strategy(model_name, self.args)
         optimizer, scheduler = get_optimizers(model, optimizer, lr, weight_decay, epochs)

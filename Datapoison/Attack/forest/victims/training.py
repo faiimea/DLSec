@@ -37,10 +37,8 @@ def run_step(kettle, poison_delta, epoch, stats, model, optimizer, scheduler, lo
             if len(batch_positions) > 0:
                 inputs[batch_positions] += poison_delta[poison_slices].to(**kettle.setup)
 
-
         # Add data augmentation
         inputs = kettle.augment(inputs)
-
 
         # Switch into training mode
         list(model.children())[-1].train() if model.frozen else model.train()
@@ -57,7 +55,6 @@ def run_step(kettle, poison_delta, epoch, stats, model, optimizer, scheduler, lo
         correct_preds += preds
 
         total_preds += labels.shape[0]
-        differentiable_params = [p for p in model.parameters() if p.requires_grad]
 
         loss.backward()
         epoch_loss += loss.item()
@@ -66,18 +63,15 @@ def run_step(kettle, poison_delta, epoch, stats, model, optimizer, scheduler, lo
 
     scheduler.step()
 
-    if epoch % 10 == 0 or epoch == (10 - 1):
-        predictions, valid_loss = run_validation(model, loss_fn, valid_loader,
-                                                 kettle.poison_setup['intended_class'],
-                                                 kettle.poison_setup['target_class'],
-                                                 kettle.setup) # num_workers改为4在这里崩了，说明这里是cpu
-        target_acc, target_loss, target_clean_acc, target_clean_loss = check_targets(
-            model, loss_fn, kettle.targetset, kettle.poison_setup['intended_class'],
-            kettle.poison_setup['target_class'],
+    # 每轮结束后进行验证
+    predictions, valid_loss = run_validation(model, loss_fn, valid_loader,
+                                             kettle.poison_setup['intended_class'],
+                                             kettle.poison_setup['target_class'],
+                                             kettle.setup) # num_workers改为4在这里崩了，说明这里是cpu
+    target_acc, target_loss, target_clean_acc, target_clean_loss = check_targets(
+        model, loss_fn, kettle.targetset, kettle.poison_setup['intended_class'],
+        kettle.poison_setup['target_class'],
             kettle.setup)
-    else:
-        predictions, valid_loss = None, None
-        target_acc, target_loss, target_clean_acc, target_clean_loss = [None] * 4
 
     current_lr = optimizer.param_groups[0]['lr']
     print_and_save_stats(epoch, stats, current_lr, epoch_loss / (batch + 1), correct_preds / total_preds,
