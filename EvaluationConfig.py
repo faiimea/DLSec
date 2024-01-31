@@ -14,7 +14,7 @@ FRIENDLYNOISE_config = {
     'friendly_momentum': 0.9,
     'clamp_min': -32 / 255,
     'clamp_max': 32 / 255,
-    'path':"./Datapoison/Friendly_noise/noise_data",
+    'path':"./Datapoison/Friendly_noise/noise_data/",
     'tag':"demoCIFAR10",
     'load':False,
     'train_batch_size':64,
