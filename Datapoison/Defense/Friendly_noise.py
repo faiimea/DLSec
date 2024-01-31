@@ -3,10 +3,11 @@ import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
 from datetime import datetime
-
+from utils.utils import train_one_epoch,evaluate
+from torch.utils.data import DataLoader
 
 class ReinforcedDataset():
-    def __init__(self, dataset,perturbation=None):
+    def __init__(self, dataset, perturbation=None):
         self.dataset = dataset
         self.perturbation = perturbation
 
@@ -94,9 +95,10 @@ def gen_friendly_noise(model, original_dataloader, device=torch.device('cuda'), 
     return friendly_noise
 
 
-def reinforce_dataset(path: str = "./Friendly_noise_data/", tag: str = None, load: bool = False, **friendly_noise_params):
+def reinforce_dataset(model=None, dataloader=None, path: str = "./Friendly_noise_data/", tag: str = None, load: bool = False, params=None):
     """ 将原始数据转变为带友好噪声的数据集
 
+    @param params: 全局参数，同时会利用到其中定义的friendly_noise相关的参数，位于params['FRIENDLYNOISE_extra_config']
     @param path: 所用路径，当load为True时此处为noise数据的路径，当load为False时此处为存放noise数据的文件夹的路径
     @param tag: 标记此次生成的noise数据
     @param load: 是否加载已有的noise数据
@@ -106,8 +108,26 @@ def reinforce_dataset(path: str = "./Friendly_noise_data/", tag: str = None, loa
     if load:
         friendly_noise = np.load(path)
     else:
-        friendly_noise = gen_friendly_noise(**friendly_noise_params)
+        friendly_noise = gen_friendly_noise(model=model, original_dataloader=dataloader, device=params['device'],friendly_epochs=params['FRIENDLYNOISE_extra_config']['friendly_epochs'],mu=params['FRIENDLYNOISE_extra_config']['mu'],friendly_lr=params['FRIENDLYNOISE_extra_config']['friendly_lr'],friendly_momentum=params['FRIENDLYNOISE_extra_config']['friendly_momentum'],clamp_min=params['FRIENDLYNOISE_extra_config']['clamp_min'],clamp_max=params['FRIENDLYNOISE_extra_config']['clamp_max'])
         np.save(path + datetime.now().strftime("%Y%m%d-%H%M%S-" + tag), friendly_noise.numpy())
 
-    friendly_noise_dataset = ReinforcedDataset(friendly_noise_params['original_dataloader'].dataset,friendly_noise)
+    friendly_noise_dataset = ReinforcedDataset(dataloader.dataset, friendly_noise)
     return friendly_noise_dataset
+
+
+def datapoison_model_reinforce(model=None, dataloader=None, params=None):
+    friendly_noise_dataset = reinforce_dataset(model=model, dataloader=dataloader, path=params['FRIENDLYNOISE_extra_config']['path'], tag=params['FRIENDLYNOISE_extra_config']['tag'], load=params['FRIENDLYNOISE_extra_config']['load'], params=params)
+    friendly_noise_dataloader= DataLoader(friendly_noise_dataset, batch_size=params['FRIENDLYNOISE_extra_config']['train_batch_size'])
+
+    min_loss=torch.inf
+    best_acc=0
+    for epoch in range(params['FRIENDLYNOISE_extra_config']['train_epochs']):
+        train_stats = train_one_epoch(friendly_noise_dataloader, model, params['FRIENDLYNOISE_extra_config']['train_optimizer'](model.parameters(),lr=params['FRIENDLYNOISE_extra_config']['train_lr']), params['FRIENDLYNOISE_extra_config']['train_criterion'], params['device'])
+        test_stats = evaluate(friendly_noise_dataloader, model, params['FRIENDLYNOISE_extra_config']['train_criterion'],params['device'])
+        print(f"EPOCH {epoch + 1}/{params['FRIENDLYNOISE_extra_config']['train_epochs']}   loss: {train_stats['loss']:.4f} ACC: {test_stats['acc']:.4f}")
+        if train_stats['loss'] < min_loss:
+            print("Model updated ---", test_stats)
+            torch.save(model.state_dict(), params['FRIENDLYNOISE_extra_config']['reinforced_model_path'])
+            min_loss = train_stats['loss']
+            best_acc=test_stats['acc']
+    return params['FRIENDLYNOISE_extra_config']['reinforced_model_path'],best_acc

@@ -39,6 +39,25 @@ def cal_entropy_weight(data: pd.DataFrame):
     return w
 
 
+def train_one_epoch(data_loader, model, optimizer, criterion, device):
+    running_loss = 0
+    model.train()
+    for step, (batch_x, batch_y) in enumerate(tqdm(data_loader)):
+        batch_x = batch_x.to(device, non_blocking=True)
+        batch_y = batch_y.to(device, non_blocking=True)
+
+        optimizer.zero_grad()
+        output = model(batch_x)
+
+        loss = criterion(output, batch_y)
+
+        loss.backward()
+        optimizer.step()
+        running_loss += loss
+    return {"loss": running_loss / len(data_loader)}
+
+
+
 if __name__ == "__main__":
     test_data = [[12, 44, 59], [19, 34, 28], [15, 45, 55], [21, 22, 33]]
     df = pd.DataFrame(test_data, columns=['c1', 'c2', 'c3'])

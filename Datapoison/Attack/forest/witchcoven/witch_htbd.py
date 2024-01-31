@@ -5,7 +5,7 @@ import torchvision
 from PIL import Image
 from ..utils import bypass_last_layer
 from ..consts import BENCHMARK, NON_BLOCKING
-from forest.data import datasets
+from Datapoison.Attack.forest.data import datasets
 torch.backends.cudnn.benchmark = BENCHMARK
 import random
 

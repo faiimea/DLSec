@@ -3,7 +3,7 @@ import torchvision
 from tqdm import tqdm
 from numpy import mean
 
-import forest
+from Datapoison.Attack import forest
 
 '''
 name_tag:用于命名文件夹
@@ -34,11 +34,12 @@ vruns:控制了在训练模型后，多少次重新初始化模型并检查是�
 生成毒药的优化器直接选了signAdam？
 '''
 
-path = 'E:\Projects\Pycharm\DLSec\data' # 不太确定工作路径设置的哪里，绝对路径反正没错
+path = r'C:\Users\Lenovo\Desktop\DLSec\data'  # 不太确定工作路径设置的哪里，绝对路径反正没错
+
 
 class DatapoisonAttack():
     def __init__(self, local_model=None, device: str = 'cuda:0', dataset: str = 'CIFAR10', epochs: int = 10,
-                 batch_size: int = 128, poison_batch_size: int = 512, poisonkey: float = None, lr: float = 0.1,
+                 batch_size: int = 128, poison_batch_size: int = 512, poisonkey: float = None, lr: float = 0.001,
                  weight_decay: float = 5e-4, optimizer: str = 'SGD', scenario: str = 'transfer', data_path: str = path,
                  tag: str = '', targets: int = 1, eps: float = 16.0, algorithm: str = 'poison-frogs', restarts: int = 3,
                  attack_iter: int = 200, tau: float = 0.1, vruns: int = 1):
@@ -74,17 +75,23 @@ class DatapoisonAttack():
         poison_acc = []
         acc = []
         for _ in range(times):
-            res = self.model.validate(self.data, self.poison_delta)   # 返回投毒成功率+投毒后的准确率？
+            res = self.model.validate(self.data, self.poison_delta)  # 返回投毒成功率+投毒后的准确率？
             poison_acc = res['target_accs'][-1]
             acc = res['valid_accs'][-1]
+        rst={"PoisonSR": poison_acc, "afterPoisonACC": acc}
+        print("数据投毒结果",rst)
+        return rst
 
-        return poison_acc, acc
 
-'''
 if __name__ == "__main__":
-    a = DatapoisonAttack(local_model=torchvision.models.ResNet(torchvision.models.resnet.BasicBlock, [2, 2, 2, 2]),
-                         scenario='from-scratch', epochs=2, attack_iter=20, restarts=1)
+    # a = DatapoisonAttack(local_model=torchvision.models.ResNet(torchvision.models.resnet.BasicBlock, [2, 2, 2, 2]),
+    #                      scenario='from-scratch', epochs=2, attack_iter=20, restarts=1)
+    # print('开始测试：')
+    # results = a.test()
+    # print(results)
+
+    a = DatapoisonAttack(local_model=torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True),
+                         scenario="", epochs=2, attack_iter=20, restarts=1)
     print('开始测试：')
     results = a.test()
     print(results)
-'''
