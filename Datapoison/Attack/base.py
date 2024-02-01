@@ -1,35 +1,33 @@
 import torch
 import torchvision
-from tqdm import tqdm
-from numpy import mean
 
 from Datapoison.Attack import forest
 
 '''
 name_tag:用于命名文件夹
 device:计算设备
-local_model:应该传入一个预训练好的模型，如果策略为from-scratch就是我们先训练一下，然后再投毒，否则就是直接投毒
-dataset:在什么数据集上投毒和训练，传入torchvision.datasets下数据集（这里自己封装了，只能填字符串，后续想想能不能改）
+model:应该传入一个预训练好的模型，如果策略为from-scratch就是我们先训练一下，然后再投毒，否则就是直接投毒
+use_dataset:在什么数据集上投毒和训练，传入torchvision.datasets下数据集（这里自己封装了，只能填字符串，后续想想能不能改）
 epochs:训练轮数
 batch_size:训练模型时的批大小
 poison_batch_size:投毒时的批大小
-lr:训练模型的学习率
+poison_lr:训练模型的学习率
 weight_decay:权重衰减
 optimizer:优化器，使用torch.optim下的优化器
 scenario:训练策略，可选['from-scratch', 完整训练
                     'transfer'] 从预训练模型迁移
 poisonkey:投毒密钥，用于生成随机数
-targets:投毒目标数量
-budget:投毒比例
-eps:允许修改的幅度
-algorithm:投毒算法，可选['gradient-matching', 'gradient-matching-private', 'gradient-matching-mt',
+poison_target_num:投毒目标数量
+poison_budget:投毒比例
+poison_eps:允许修改的幅度
+datapoison_method:投毒算法，可选['gradient-matching', 'gradient-matching-private', 'gradient-matching-mt',
           'watermark', 'poison-frogs', 'metapoison', 'hidden-trigger',
           'metapoison-v2', 'metapoison-v3', 'bullseye', 'patch',
           'gradient-matching-hidden', 'convex-polytope']（大概？）
-restarts:投毒重启次数
-attack_iter:投毒迭代次数
-tau:投毒时的学习率
-vruns:控制了在训练模型后，多少次重新初始化模型并检查是否达到了预定的目标（不太懂，先设默认的1）
+poison_restarts:投毒重启次数
+poison_attack_iter:投毒迭代次数
+poison_tau:投毒时的学习率
+poison_vruns:控制了生成毒药后，验证毒药次数
 
 生成毒药的优化器直接选了signAdam？
 '''
@@ -37,18 +35,32 @@ vruns:控制了在训练模型后，多少次重新初始化模型并检查是�
 path = r'C:\Users\Lenovo\Desktop\DLSec\data'  # 不太确定工作路径设置的哪里，绝对路径反正没错
 
 
+
 class DatapoisonAttack():
-    def __init__(self, local_model=None, device: str = 'cuda:0', dataset: str = 'CIFAR10', epochs: int = 10,
-                 batch_size: int = 128, poison_batch_size: int = 512, poisonkey: float = None, lr: float = 0.001,
-                 weight_decay: float = 5e-4, optimizer: str = 'SGD', scenario: str = 'transfer', data_path: str = path,
-                 tag: str = '', targets: int = 1, eps: float = 16.0, algorithm: str = 'poison-frogs', restarts: int = 3,
-                 attack_iter: int = 200, tau: float = 0.1, vruns: int = 1):
-        setup = {'device': torch.device(device), 'dtype': torch.float32, 'non_blocking': True}
-        args = {'scenario': scenario, 'random_seed': None, 'local_model': local_model, 'optimizer': optimizer,
-                'dataset': dataset, 'lr': lr, 'weight_decay': weight_decay, 'epochs': epochs, 'batch_size': batch_size,
-                'poison_batch_size': poison_batch_size, 'poisonkey': poisonkey, 'data_path': data_path, 'tag': tag,
-                'targets': targets, 'budget': 0.01, 'eps': eps, 'algorithm': algorithm, 'restarts': restarts,
-                'attack_iter': attack_iter, 'tau': tau, 'vruns': vruns}
+    def __init__(self, params):
+        setup = {'device': params['device'], 'dtype': torch.float32, 'non_blocking': True}
+        args = {
+            'scenario': params['scenario'],
+            'random_seed': None,
+            'local_model': params['model'],
+            'optimizer': params['poison_optimizer'],
+            'dataset': params['use_dataset'],
+            'lr': params['poison_lr'],
+            'weight_decay': params['poison_weight_decay'],
+            'epochs': params['poison_epoch'],
+            'batch_size': params['batch_size'],
+            'poison_batch_size': params['poison_batch_size'],
+            'poisonkey': params['poison_key'],
+            'data_path': path, 'tag': params['tag'],
+            'targets': params['poison_target_num'],
+            'budget': params['poison_budget'],
+            'eps': params['poison_eps'],
+            'algorithm': params['datapoison_method'],
+            'restarts': params['poison_restarts'],
+            'attack_iter': params['poison_attack_iter'],
+            'tau': params['poison_tau'],
+            'vruns': params['poison_vruns']
+        }
 
         if args['scenario'] == 'from-scratch':
             args['pretrained'] = False
@@ -75,7 +87,7 @@ class DatapoisonAttack():
         poison_acc = []
         acc = []
         for _ in range(times):
-            res = self.model.validate(self.data, self.poison_delta)  # 返回投毒成功率+投毒后的准确率？
+            res = self.model.validate(self.data, self.poison_delta)   # 不确定测试时要训练几次，也许1次比较好，但是先按epochs来
             poison_acc = res['target_accs'][-1]
             acc = res['valid_accs'][-1]
         rst={"PoisonSR": poison_acc, "afterPoisonACC": acc}
@@ -83,15 +95,14 @@ class DatapoisonAttack():
         return rst
 
 
-if __name__ == "__main__":
-    # a = DatapoisonAttack(local_model=torchvision.models.ResNet(torchvision.models.resnet.BasicBlock, [2, 2, 2, 2]),
-    #                      scenario='from-scratch', epochs=2, attack_iter=20, restarts=1)
-    # print('开始测试：')
-    # results = a.test()
-    # print(results)
+'''
+import sys
+sys.path.append("../..")
+from EvaluationConfig import evaluation_params
 
-    a = DatapoisonAttack(local_model=torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True),
-                         scenario="", epochs=2, attack_iter=20, restarts=1)
+if __name__ == "__main__":
+    a = DatapoisonAttack(evaluation_params)
     print('开始测试：')
     results = a.test()
     print(results)
+'''
