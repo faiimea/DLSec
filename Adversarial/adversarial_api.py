@@ -276,10 +276,12 @@ def adversarial_mutiple_attack(model=None, train_dataloader=None, params=None):
     if model is None:
         model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
     
+
     #print(model)
     use_cuda = True
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+    print(device)
+    model.to(device)
     if train_dataloader is None:
         testloader=dataset_preprocess()
     else:
@@ -290,6 +292,8 @@ def adversarial_mutiple_attack(model=None, train_dataloader=None, params=None):
     with torch.no_grad():
         for data in testloader:
             images, labels = data
+            images=images.to(device)
+            labels=labels.to(device)
             org_img.append(images)
             org_labels.append(labels)
 

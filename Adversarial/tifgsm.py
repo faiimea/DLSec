@@ -66,7 +66,9 @@ class TIFGSM(Attack):
                 continue
 
             # Apply kernel to gradient
-            g = f.conv2d(delta.grad, kernel, stride=1, padding="same", groups=3)
+            padding_value = (self.kern_len - 1) // 2
+            g = f.conv2d(delta.grad, kernel, stride=1, padding=(padding_value, padding_value), groups=3)
+
 
             # Apply momentum term
             g = self.decay * g + g / torch.mean(
