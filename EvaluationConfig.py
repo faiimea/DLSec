@@ -19,7 +19,7 @@ FRIENDLYNOISE_config = {
     'tag':"demoCIFAR10",
     'load':False,
     'train_batch_size':64,
-    'train_epochs':20,
+    'train_epochs':10,
     'train_lr':0.01,
     'train_optimizer':torch.optim.SGD,
     'train_criterion':torch.nn.CrossEntropyLoss(),

@@ -25,7 +25,9 @@ def run_backdoor_defense(allow_defense=True, model=None, method="NeuralCleanse",
             this_turn_tag = params['tag']
         DetectedBackdoor, ReinforcedModel, new_model_dict_path = deepinspect(model, train_dataloader, tag=this_turn_tag,generator_path=params['DEEPINSPECT_generator_path'],load_generator=params['DEEPINSPECT_load_generator'])
 
+
+    backdoor_result={'backdoor_num':len(DetectedBackdoor)}
     if len(DetectedBackdoor) == 0:
-        return False, None, None
+        return False, backdoor_result, None
     else:
-        return True, DetectedBackdoor, new_model_dict_path
+        return True, backdoor_result, new_model_dict_path
