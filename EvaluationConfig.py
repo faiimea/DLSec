@@ -6,7 +6,7 @@ import torch
 # model.load_state_dict(torch.load('path_to_pretrained_weights.pth'))
 # torchvision.models.ResNet(torchvision.models.resnet.BasicBlock, [2, 2, 2, 2])
 model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
-# model.load_state_dict(torch.load('./Backdoor/LocalModels/20231229-161017-BadnetCIFAR10.pth', map_location=torch.device('cpu')))
+model.load_state_dict(torch.load('./Backdoor/checkpoints/20240218-102610-WaNetCIFAR.pth', map_location=torch.device('cpu')))
 
 FRIENDLYNOISE_config = {
     'friendly_epochs': 30,
@@ -30,7 +30,7 @@ FRIENDLYNOISE_config = {
 evaluation_params = {
     'model': model,
     'adversarial_method': 'fgsm',
-    'backdoor_method': 'NeuralCleanse',
+    'backdoor_method': 'DeepInspect',
     'allow_backdoor_defense': True,
     'datapoison_method': 'poison-frogs',
     'datapoison_reinforce_method': 'FriendlyNoise',

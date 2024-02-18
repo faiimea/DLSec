@@ -8,9 +8,9 @@ def run_datapoison_reinforce(model=None, method='FriendlyNoise', train_dataloade
         return reinforced_model_path,{"After_Datapoison_Defense_ACC":Reinforced_ACC}
 
 
-def run_datapoison_test(model=None, method='forest', train_dataloader=None, params=None):
-    if method == 'forest':
-        target = DatapoisonAttack(local_model=model, scenario="from_scratch", epochs=10, attack_iter=250, restarts=1)
+def run_datapoison_test(model=None, method='poison-frogs', train_dataloader=None, params=None):
+    if method == 'poison-frogs':
+        target = DatapoisonAttack(params)
         datapoisonrst = target.test()
 
     return datapoisonrst
