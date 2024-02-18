@@ -352,6 +352,7 @@ def adversarial_mutiple_attack(model=None, train_dataloader=None, params=None):
 
     headers = ["Epsilon", "Attack Method", "ACC", "Time (seconds)"]
     print(tabulate(table_data, headers=headers, tablefmt="fancy_grid"))
+    return table_data
 
 def robust_test():
     pass
