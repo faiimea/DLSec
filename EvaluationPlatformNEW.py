@@ -48,9 +48,9 @@ def dataset_preprocess(name, batch_size=64):
 
 
 def run_test_on_model(Model2BeEvaluated, adversarial_method, allow_backdoor_defense, backdoor_method, datapoison_method, run_datapoison_reinforcement, datapoison_reinforce_method, train_dataloader=None, test_dataloader=None, params=None):
-    adversarial_rst = adversarial_test(Model2BeEvaluated, adversarial_method, test_dataloader, params)
-    isBackdoored, backdoor_rst, ReinforcedModel_dict_path = backdoor_detect_and_defense(allow_defense=allow_backdoor_defense, Model2BeEvaluated=Model2BeEvaluated, method=backdoor_method, train_dataloader=train_dataloader, params=params)
-    datapoison_test_rst = datapoison_test(Model2BeEvaluated=Model2BeEvaluated, method=datapoison_method, train_dataloader=train_dataloader, params=params)
+    # adversarial_rst = adversarial_test(Model2BeEvaluated, adversarial_method, test_dataloader, params)
+    isBackdoored, backdoor_rst,trigger, ReinforcedModel_dict_path = backdoor_detect_and_defense(allow_defense=allow_backdoor_defense, Model2BeEvaluated=Model2BeEvaluated, method=backdoor_method, train_dataloader=train_dataloader, params=params)
+    # datapoison_test_rst = datapoison_test(Model2BeEvaluated=Model2BeEvaluated, method=datapoison_method, train_dataloader=train_dataloader, params=params)
     ReinforcedModel_dict_path = None
     if run_datapoison_reinforcement:
         if ReinforcedModel_dict_path is not None:
@@ -62,7 +62,7 @@ def run_test_on_model(Model2BeEvaluated, adversarial_method, allow_backdoor_defe
     else:
         datapoison_defense_rst = None
 
-    process_result(params['tag'],adversarial_rst, backdoor_rst, datapoison_test_rst, datapoison_defense_rst)
+    # process_result(params['tag'],adversarial_rst, backdoor_rst, datapoison_test_rst, datapoison_defense_rst)
     return isBackdoored
 
 
@@ -101,7 +101,7 @@ def adversarial_test(Model2BeEvaluated, method='fgsm', train_dataloader=None, pa
 
 def backdoor_detect_and_defense(allow_defense=True, Model2BeEvaluated=None, method='NeuralCleanse', train_dataloader=None, params=None):
     print("开始后门检测")
-    isBackdoored, backdoor_rst, ReinforcedModel_dict_path = run_backdoor_defense(allow_defense, Model2BeEvaluated, method, train_dataloader, params)
+    isBackdoored, backdoor_rst, trigger,ReinforcedModel_dict_path = run_backdoor_defense(allow_defense, Model2BeEvaluated, method, train_dataloader, params)
     print("-" * 20, "后门攻击评测结果", "-" * 20)
     print("后门检测：", end="")
     if isBackdoored:
@@ -109,7 +109,7 @@ def backdoor_detect_and_defense(allow_defense=True, Model2BeEvaluated=None, meth
         print("防御后模型已存入目录", ReinforcedModel_dict_path)
     else:
         print("未检测到后门")
-    return isBackdoored, backdoor_rst, ReinforcedModel_dict_path
+    return isBackdoored, backdoor_rst, trigger,ReinforcedModel_dict_path
 
 
 def datapoison_test(Model2BeEvaluated=None, method=None, train_dataloader=None, params=None):

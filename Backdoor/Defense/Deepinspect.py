@@ -108,9 +108,13 @@ def test_clean(model, source_loader, device):
     return acc.item()
 
 
-def detect_triger(gen, device, alpha=0.02):
+def detect_triger(gen, device, dataset,model,alpha=0.02):
     noise = torch.randn((100, 100)).to(device)
     trigger_perturbations = []
+    trigger=[]
+    loader=DataLoader(dataset=dataset,batch_size=100,shuffle=True)
+    first_batch = next(iter(loader))
+    inputs, _ = first_batch
     for target_class in range(10):
         label = torch.ones(100, dtype=torch.int64) * target_class
         one_hot_label = one_hot(label).to(device)
@@ -118,6 +122,9 @@ def detect_triger(gen, device, alpha=0.02):
         abs_sum = torch.sum(torch.abs(G_out.view(G_out.shape[0], -1)), dim=1)
         value, index = torch.min(abs_sum, dim=0)
         trigger_perturbations.append(value.item())
+        pred=model(inputs.to(device)+G_out.to(device)).data.max(1)[1]
+        acc=pred.eq(label.to(device).data.view_as(pred)).sum()/100
+        trigger.append((value.item(),acc))
 
     # 计算触发器扰动的中位数
     median = np.median(trigger_perturbations)
@@ -140,17 +147,17 @@ def detect_triger(gen, device, alpha=0.02):
     outliers = [item[0] for item in left_subgroup if item[1] > cutoff * mad]
     if len(outliers) > 0:
         print("存在异常值！", outliers)
-        return outliers
+        return outliers,trigger
     else:
         print("未检测到异常值。")
-        return None
+        return None,trigger
 
 
 def train_gen(gen, model, epoch, dataloader, device, threshold=100, generator_path=None):
     model.eval()
     all_label = []
     all_img = {}
-    patience = 10
+    patience = 30
     noimpovement = 0
     bestloss = float("inf")
     for img, label in dataloader.dataset:
@@ -162,7 +169,7 @@ def train_gen(gen, model, epoch, dataloader, device, threshold=100, generator_pa
             all_img = list(all_img.values())  # 获取字典中的张量值列表
             all_img = torch.stack(all_img).to(device)
             break
-    for i in range(1, epoch + 1):
+    for _ in range(1, epoch + 1):
         gen.train()
         optimizer = torch.optim.Adam(gen.parameters(), lr=1e-2)
         lamda1 = 0.6
@@ -215,7 +222,7 @@ def train_gen(gen, model, epoch, dataloader, device, threshold=100, generator_pa
             L_Gan_sum += L_Gan.item()
             count_sum += 1
         print(
-            f'Epoch-{epoch}: Loss={round(Loss_sum / count_sum, 3)}, L_trigger={round(L_trigger_sum / count_sum, 3)}, L_pert={round(L_pert_sum / count_sum, 3)}, L_Gan={round(L_Gan_sum / count_sum, 3)}')
+            f'Epoch-{_}: Loss={round(Loss_sum / count_sum, 3)}, L_trigger={round(L_trigger_sum / count_sum, 3)}, L_pert={round(L_pert_sum / count_sum, 3)}, L_Gan={round(L_Gan_sum / count_sum, 3)}')
 
 
 def deepinspect(model, train_dataloader, tag, generator_path=None, load_generator=False):
@@ -253,9 +260,9 @@ def deepinspect(model, train_dataloader, tag, generator_path=None, load_generato
     后门检测部分
     '''
     gen.eval()
-    outliers = detect_triger(gen=gen, device=device)
+    outliers,trigger = detect_triger(gen=gen, device=device,dataset=dataset,model=model)
     if outliers is None:
-        return [], None, None
+        return [], trigger,None, None
     '''
     后面是防御部分
     '''
@@ -295,4 +302,4 @@ def deepinspect(model, train_dataloader, tag, generator_path=None, load_generato
         print("防御后的后门准确率：{:.2f}%".format(bdacc2 * 100))
     new_model_save_path = os.getcwd() + "/Backdoor/Defense/DeepInspectResult/" + tag
     torch.save(newmodel.state_dict(), new_model_save_path)
-    return [outliers], newmodel, new_model_save_path
+    return [outliers], trigger,newmodel, new_model_save_path

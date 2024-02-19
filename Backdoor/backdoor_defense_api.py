@@ -11,23 +11,18 @@ import torchvision.datasets
 
 def run_backdoor_defense(allow_defense=True, model=None, method="NeuralCleanse", train_dataloader=None, params=None):
 
-    if method == 'NeuralCleanse':
-        bdd = BackdoorDefense(dataloader=train_dataloader, model=model, triggerpath="./Backdoor/Defense/" + method + datetime.now().strftime("-%Y%m%d-%H%M%S") + ".pth")
-        bdd.run()
-        '''
-        bdd返回的测试结果 TO BE DONE
-        有待协商
-        '''
+    if method == 'NeuralCleanse' or method=='Tabor':
+        DetectedBackdoor, trigger,ReinforcedModel, new_model_dict_path = BackdoorDefense(dataloader=train_dataloader, model=model, triggerpath="Backdoor/Defense/" + method + datetime.now().strftime("-%Y%m%d-%H%M%S") + ".pth")
     elif method == 'DeepInspect':
         if params['tag'] is None:
             this_turn_tag = "DeepInspect-" + datetime.now().strftime("%Y%m%d-%H%M%S")
         else:
             this_turn_tag = params['tag']
-        DetectedBackdoor, ReinforcedModel, new_model_dict_path = deepinspect(model, train_dataloader, tag=this_turn_tag,generator_path=params['DEEPINSPECT_generator_path'],load_generator=params['DEEPINSPECT_load_generator'])
-
+        DetectedBackdoor, trigger,ReinforcedModel, new_model_dict_path = deepinspect(model, train_dataloader, tag=this_turn_tag,generator_path=params['DEEPINSPECT_generator_path'],load_generator=params['DEEPINSPECT_load_generator'])
+    print(DetectedBackdoor, trigger)
 
     backdoor_result={'backdoor_num':len(DetectedBackdoor)}
     if len(DetectedBackdoor) == 0:
-        return False, backdoor_result, None
+        return False, backdoor_result,trigger, None
     else:
-        return True, backdoor_result, new_model_dict_path
+        return True, backdoor_result,trigger, new_model_dict_path
