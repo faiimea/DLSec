@@ -14,11 +14,11 @@ NC也是分为三个步骤，
     后门防御：mitigate()
 实际上如果只需要检测对黑盒模型即可，防御需要是白盒，deepinspect亦然
 '''
-local_model_path="./LocalModels/20231222-113143-BadnetCIFAR10.pth"
+local_model_path="./Backdoor/LocalModels/20231229-161017-BadnetCIFAR10.pth"
 model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
 print("Loading local model from path:", local_model_path)
-model=torch.load(local_model_path)
-model.to("cuda")
+model.load_state_dict(torch.load(local_model_path, map_location=torch.device('cuda')))
+model=model.to("cuda")
 norm_mean = [0.5,0.5,0.5]
 norm_std = [0.5,0.5,0.5]
 # 创建用于加载CIFAR10数据集的transform和dataloader

@@ -108,13 +108,9 @@ def test_clean(model, source_loader, device):
     return acc.item()
 
 
-def detect_triger(gen, device, dataset,model,alpha=0.02):
+def detect_triger(gen, device, alpha=0.02):
     noise = torch.randn((100, 100)).to(device)
     trigger_perturbations = []
-    trigger=[]
-    loader=DataLoader(dataset=dataset,batch_size=100,shuffle=True)
-    first_batch = next(iter(loader))
-    inputs, _ = first_batch
     for target_class in range(10):
         label = torch.ones(100, dtype=torch.int64) * target_class
         one_hot_label = one_hot(label).to(device)
@@ -122,22 +118,17 @@ def detect_triger(gen, device, dataset,model,alpha=0.02):
         abs_sum = torch.sum(torch.abs(G_out.view(G_out.shape[0], -1)), dim=1)
         value, index = torch.min(abs_sum, dim=0)
         trigger_perturbations.append(value.item())
-        pred=model(inputs.to(device)+G_out.to(device)).data.max(1)[1]
-        acc=pred.eq(label.to(device).data.view_as(pred)).sum()/100
-        trigger.append((value.item(),acc))
 
     # 计算触发器扰动的中位数
     median = np.median(trigger_perturbations)
-
-    # 计算左子组中数据点与组中位数的绝对偏差
-    left_subgroup = [(i, median - x) for i, x in enumerate(trigger_perturbations) if x < median]
-
-
-
+    left_subgroup = [(i, median-x) for i, x in enumerate(trigger_perturbations) if x < median]
+    # 计算左子组中数据点与组中位数的绝对偏差1
+    median_1 = np.median([item[1] for item in left_subgroup])
     # 计算触发器扰动的标准差估计值
-    mad = 1.4826 * np.median(np.abs(trigger_perturbations - median), axis=0)
-    # 鬼知道总体偏差是哪个值
-    # mad = 1.4826 * np.std([item[1] for item in left_subgroup])
+    mad = 1.4826 * np.median(np.abs([item[1] for item in left_subgroup] - median_1), axis=0)
+    result= stats.norm.cdf((median-trigger_perturbations-median_1)/mad)
+    
+    
     # 计算假设测试的显著性水平（α）alpha
 
     # 根据显著性水平计算截断阈值（c）
@@ -147,10 +138,10 @@ def detect_triger(gen, device, dataset,model,alpha=0.02):
     outliers = [item[0] for item in left_subgroup if item[1] > cutoff * mad]
     if len(outliers) > 0:
         print("存在异常值！", outliers)
-        return outliers,trigger
+        return outliers,result
     else:
         print("未检测到异常值。")
-        return None,trigger
+        return None,result
 
 
 def train_gen(gen, model, epoch, dataloader, device, threshold=100, generator_path=None):
@@ -260,7 +251,7 @@ def deepinspect(model, train_dataloader, tag, generator_path=None, load_generato
     后门检测部分
     '''
     gen.eval()
-    outliers,trigger = detect_triger(gen=gen, device=device,dataset=dataset,model=model)
+    outliers,trigger = detect_triger(gen=gen, device=device)
     if outliers is None:
         return [], trigger,None, None
     '''

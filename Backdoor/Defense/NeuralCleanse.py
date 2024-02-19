@@ -5,6 +5,7 @@ import random
 import pickle
 import torch.nn.functional as F
 import os
+import scipy.stats as stats
 
 class NeuralCleanse():
     def __init__(self, X, Y, model, num_samples,path='/default'):
@@ -157,7 +158,7 @@ class NeuralCleanse():
         MAD = 1.4826 * np.median(np.abs(l1_norms - median), axis=0)
         out_of_distribution=(median - stringency * MAD > l1_norms) 
         outliers = np.where(out_of_distribution)[0]
-       
+        result= stats.norm.cdf((median-l1_norms)/MAD)
         
         for possible_target_label in outliers:
             # x_samples = []
@@ -183,10 +184,8 @@ class NeuralCleanse():
                 self.possible_target_label.append(possible_target_label)
                 print("There is a possible backdoor to label ", possible_target_label, " with ",
                   "{0:.2f}".format(100 * acc[possible_target_label]), "% accuracy.")
-            trigger=[]
-            for index in range(len(l1_norms)):
-                trigger.append((l1_norms[index],acc[index]))
-            return outliers,trigger
+            print(outliers,result)
+            return outliers,result
     def mitigate(self,test_X,test_Y):
         BATCH_SIZE=64
         TARGET_LS = self.possible_target_label
@@ -279,7 +278,6 @@ class NeuralCleanse():
                 y_act = np.array(y_act).flatten()
 
                 Accuracy = (sum([y_pred[i] == y_act[i] for i in range(len(y_pred))])) / len(y_pred)
-                torch.save(model,"./LocalModels/NCbadnet")
                 if (verbose):
                     # print(running_loss, steps_per_epoch)
                     print("Epoch -- {} ; Average Loss -- {} ; Accuracy -- {}".format(epoch,

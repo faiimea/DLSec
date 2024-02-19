@@ -221,7 +221,7 @@ class Tabor():
             except:
                 print("you need to reverse engineer triggers, first.")
                 exit()
-            mask, pattern = self.triggers[4][1].numpy(),self.triggers[4][0].numpy()
+            mask, pattern = self.triggers[TARGET_LS[0]][1].numpy(),self.triggers[TARGET_LS[0]][0].numpy()
             raw_img = np.copy(img)
             adv_img = np.copy(raw_img)
             adv_img = injection_func(mask, pattern, adv_img)
@@ -268,20 +268,21 @@ class Tabor():
         test_adv_gen = DataGenerator(TARGET_LS, test_X, test_Y, 1, 1)
         test_clean_gen = DataGenerator(TARGET_LS, test_X, test_Y, 0, 1)
         loss = torch.nn.CrossEntropyLoss()
-        lr = 0.0005
-        def fit(model,train_gen, verbose, steps_per_epoch, learning_rate,loss, change_lr_every=25,test_gen = None, stps = None, model_path = None):
-            optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.0001)
-            epoch=0
-            Accuracy=0
-            while Accuracy<0.995:
+        lr = 0.005
+        def fit(model,train_gen, verbose, steps_per_epoch, learning_rate,loss, change_lr_every=25):
+            model.train()
+            # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.0001)
+            optimizer=torch.optim.SGD(model.parameters(),lr=learning_rate,momentum=0.9,weight_decay=1e-4)
+            for epoch in range(20):
                 if (epoch % change_lr_every == change_lr_every - 1):
-                    learning_rate = learning_rate / 2
-                    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+                    learning_rate = learning_rate / 5
+                    # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+                    optimizer=torch.optim.SGD(model.parameters(),lr=learning_rate,momentum=0.9,weight_decay=1e-4)
                 train_gen.on_epoch()
                 running_loss = 0.0
                 y_pred = []
                 y_act = []
-                for step in range(steps_per_epoch):
+                for _ in range(steps_per_epoch):
                     data_x, data_y = train_gen.gen_data()
                     optimizer.zero_grad()
                     data_x = data_x.to("cuda")
@@ -298,7 +299,6 @@ class Tabor():
                 y_act = np.array(y_act).flatten()
 
                 Accuracy = (sum([y_pred[i] == y_act[i] for i in range(len(y_pred))])) / len(y_pred)
-                epoch+=1
                 if (verbose):
                     # print(running_loss, steps_per_epoch)
                     print("Epoch -- {} ; Average Loss -- {} ; Accuracy -- {}".format(epoch,
