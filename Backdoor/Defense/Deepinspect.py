@@ -72,7 +72,7 @@ def one_hot(x, class_count=10):
     return torch.eye(class_count)[x, :]
 
 
-def test_gen_backdoor(gen, model, source_loader, target_label, device):
+def test_gen_backdoor(gen, model, source_loader, target_label, device,num_class):
     gen.eval()
     model.eval()
     total_correct = 0
@@ -80,7 +80,7 @@ def test_gen_backdoor(gen, model, source_loader, target_label, device):
     with torch.no_grad():
         for i, (img, ori_label) in enumerate(source_loader):
             label = torch.ones_like(ori_label) * target_label
-            one_hot_label = one_hot(label).to(device)
+            one_hot_label = one_hot(label,class_count=num_class).to(device)
             img, label = img.to(device), label.to(device)
             noise = torch.randn((img.shape[0], 100)).to(device)
             G_out = gen(one_hot_label, noise)
@@ -108,16 +108,18 @@ def test_clean(model, source_loader, device):
     return acc.item()
 
 
-def detect_triger(gen, device, alpha=0.02):
+def detect_triger(gen, device, alpha=0.02,num_class=10):
     noise = torch.randn((100, 100)).to(device)
     trigger_perturbations = []
-    for target_class in range(10):
+    
+    for target_class in range(num_class):
         label = torch.ones(100, dtype=torch.int64) * target_class
-        one_hot_label = one_hot(label).to(device)
+        one_hot_label = one_hot(label,class_count=num_class).to(device)
         G_out = gen(one_hot_label, noise).detach().cpu()
         abs_sum = torch.sum(torch.abs(G_out.view(G_out.shape[0], -1)), dim=1)
         value, index = torch.min(abs_sum, dim=0)
         trigger_perturbations.append(value.item())
+        
 
     # 计算触发器扰动的中位数
     median = np.median(trigger_perturbations)
@@ -144,7 +146,7 @@ def detect_triger(gen, device, alpha=0.02):
         return None,result
 
 
-def train_gen(gen, model, epoch, dataloader, device, threshold=100, generator_path=None):
+def train_gen(gen, model, epoch, dataloader, device, threshold=100, generator_path=None,num_class=10):
     model.eval()
     all_label = []
     all_img = {}
@@ -155,7 +157,7 @@ def train_gen(gen, model, epoch, dataloader, device, threshold=100, generator_pa
         if label not in all_label:
             all_img[label] = img
             all_label.append(label)
-        if len(all_label) == 10:
+        if len(all_label) == num_class:
             all_label = torch.tensor(all_label).to(device)
             all_img = list(all_img.values())  # 获取字典中的张量值列表
             all_img = torch.stack(all_img).to(device)
@@ -175,7 +177,7 @@ def train_gen(gen, model, epoch, dataloader, device, threshold=100, generator_pa
         count_sum = 0
         for i, (img, ori_label) in enumerate(dataloader):
             label = torch.randint(low=0, high=10, size=(img.shape[0],))
-            one_hot_label = one_hot(label).to(device)
+            one_hot_label = one_hot(label,class_count=num_class).to(device)
             img, label = img.to(device), label.to(device)
             noise = torch.randn((img.shape[0], 100)).to(device)
             G_out = gen(one_hot_label, noise)
@@ -234,6 +236,15 @@ def deepinspect(model, train_dataloader, tag, generator_path=None, load_generato
     indices = np.random.choice(len(all_dataset), clean_budget, replace=False)
     dataset = Subset(all_dataset, indices)
     dataloader = DataLoader(dataset, batch_size=128, shuffle=True)
+
+    labels = []
+    for data in dataset:
+        _, label = data  # 假设数据集对象中的每个样本包含数据和标签，且标签位于索引 1 处
+        labels.append(label)
+
+    # 统计标签种类数
+    unique_labels = torch.unique(torch.tensor(labels))
+    num_classes = len(unique_labels)
     device = "cuda"
     epoch = 20
 
@@ -246,12 +257,12 @@ def deepinspect(model, train_dataloader, tag, generator_path=None, load_generato
     if load_generator:
         gen.load_state_dict(torch.load(generator_path))
     else:
-        train_gen(gen=gen, epoch=epoch, model=model, dataloader=dataloader, device=device, generator_path=generator_path)
+        train_gen(gen=gen, epoch=epoch, model=model, dataloader=dataloader, device=device, generator_path=generator_path,num_class=num_classes)
     '''
     后门检测部分
     '''
     gen.eval()
-    outliers,trigger = detect_triger(gen=gen, device=device)
+    outliers,trigger = detect_triger(gen=gen, device=device,num_class=num_classes)
     if outliers is None:
         return [], trigger,None, None
     '''
@@ -262,10 +273,10 @@ def deepinspect(model, train_dataloader, tag, generator_path=None, load_generato
     for target_class in outliers:
         testdataset = Subset(all_dataset, indices=[i for i in range(len(all_dataset)) if i not in indices and np.random.random() < 0.1])
         testdataloader = DataLoader(testdataset, batch_size=128, shuffle=True)
-        bdacc1 = test_gen_backdoor(gen, newmodel, testdataloader, target_class, device)
+        bdacc1 = test_gen_backdoor(gen, newmodel, testdataloader, target_class, device,num_class=num_classes)
         cda1 = test_clean(newmodel, testdataloader, device)
         label = torch.ones((int(patch_rate * clean_budget)), dtype=torch.int64) * target_class
-        one_hot_label = one_hot(label).to(device)
+        one_hot_label = one_hot(label,class_count=num_classes).to(device)
         G_out = gen(one_hot_label, noise).detach().cpu()
         patched_dataset = []
         for i, (img, label) in enumerate(dataset):
@@ -285,7 +296,7 @@ def deepinspect(model, train_dataloader, tag, generator_path=None, load_generato
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-        bdacc2 = test_gen_backdoor(gen, newmodel, testdataloader, target_class, device)
+        bdacc2 = test_gen_backdoor(gen, newmodel, testdataloader, target_class, device,num_class=num_classes)
         cda2 = test_clean(newmodel, testdataloader, device)
         print("防御前的分类准确率：{:.2f}%".format(cda1 * 100))
         print("防御前的后门准确率：{:.2f}%".format(bdacc1 * 100))
@@ -293,4 +304,4 @@ def deepinspect(model, train_dataloader, tag, generator_path=None, load_generato
         print("防御后的后门准确率：{:.2f}%".format(bdacc2 * 100))
     new_model_save_path = os.getcwd() + "/Backdoor/Defense/DeepInspectResult/" + tag
     torch.save(newmodel.state_dict(), new_model_save_path)
-    return [outliers], trigger,newmodel, new_model_save_path
+    return outliers, trigger,newmodel, new_model_save_path

@@ -14,19 +14,20 @@ NC也是分为三个步骤，
     后门防御：mitigate()
 实际上如果只需要检测对黑盒模型即可，防御需要是白盒，deepinspect亦然
 '''
-local_model_path="./Backdoor/LocalModels/20231229-161017-BadnetCIFAR10.pth"
+# local_model_path="./Backdoor/LocalModels/20231229-161017-BadnetCIFAR10.pth"
+local_model_path="./Backdoor/LocalModels/pth"
 model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
 print("Loading local model from path:", local_model_path)
 model.load_state_dict(torch.load(local_model_path, map_location=torch.device('cuda')))
 model=model.to("cuda")
-norm_mean = [0.5,0.5,0.5]
-norm_std = [0.5,0.5,0.5]
+norm_mean = [0.485, 0.456, 0.406]
+norm_std = [0.229, 0.224, 0.225]
 # 创建用于加载CIFAR10数据集的transform和dataloader
 transform = transforms.Compose(
         [transforms.ToTensor(),
          transforms.Normalize(norm_mean, norm_std),
          ])
-traindataset = CIFAR10(root='../data', train=True, download=True, transform=transform)
+traindataset = CIFAR10(root='./data', train=True, download=True, transform=transform)
 traindataloader = DataLoader(traindataset, batch_size=64, shuffle=True)
 org_img=[]
 org_label=[]
@@ -41,7 +42,7 @@ NC.reverse_engineer_triggers()
 NC.backdoor_detection()
 
 
-testset = CIFAR10(root='../data', train=False, download=False, transform=transform)
+testset = CIFAR10(root='./data', train=False, download=False, transform=transform)
 testX = []
 testY = []
 for data in testset:
