@@ -5,8 +5,8 @@ import torch
 # model = models.resnet50(pretrained=True)
 # model.load_state_dict(torch.load('path_to_pretrained_weights.pth'))
 # torchvision.models.ResNet(torchvision.models.resnet.BasicBlock, [2, 2, 2, 2])
-model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
-model.load_state_dict(torch.load('./Backdoor/LocalModels/20231229-161017-BadnetCIFAR10.pth', map_location=torch.device('cpu')))
+model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_shufflenetv2_x0_5", pretrained=True)
+#model.load_state_dict(torch.load('./Backdoor/LocalModels/20231229-161017-BadnetCIFAR10.pth', map_location=torch.device('cpu')))
 
 FRIENDLYNOISE_config = {
     'friendly_epochs': 30,
@@ -32,13 +32,13 @@ evaluation_params = {
     'adversarial_method': 'fgsm',
     'backdoor_method': 'DeepInspect',
     'allow_backdoor_defense': True,
-    'datapoison_method': 'poison-frogs',
+    'datapoison_method': 'gradient-matching',
     'datapoison_reinforce_method': 'FriendlyNoise',
     'run_datapoison_reinforcement': True,
     'use_dataset': 'CIFAR10',
     'batch_size': 64,
     'device': 'cuda',
-    'tag': "resnet50",
+    'tag': "cifar10_shufflenetv2_x0_5",
     # 以下为部分方法会使用到的参数
     'DEEPINSPECT_generator_path': './Backdoor/Defense/DeepInspectResult/generator.pth',
     'DEEPINSPECT_load_generator': False,
