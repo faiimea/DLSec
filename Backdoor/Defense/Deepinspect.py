@@ -108,7 +108,7 @@ def test_clean(model, source_loader, device):
     return acc.item()
 
 
-def detect_triger(gen, device, alpha=0.02,num_class=10):
+def detect_triger(gen, device, alpha=0.25,num_class=10):
     noise = torch.randn((100, 100)).to(device)
     trigger_perturbations = []
     
@@ -130,23 +130,22 @@ def detect_triger(gen, device, alpha=0.02,num_class=10):
     mad = 1.4826 * np.median(np.abs([item[1] for item in left_subgroup] - median_1), axis=0)
     result= stats.norm.cdf((median-trigger_perturbations-median_1)/mad)
     
-    
+    other_result=result*90/trigger_perturbations
     # 计算假设测试的显著性水平（α）alpha
 
     # 根据显著性水平计算截断阈值（c）
-    cutoff = stats.norm.ppf(1 - alpha)
+    
 
     # 根据 DMAD 检测标准，判断是否存在异常值
-    outliers = [item[0] for item in left_subgroup if item[1] > cutoff * mad]
+    outliers = np.where(other_result>1-alpha)[0]
     if len(outliers) > 0:
         print("存在异常值！", outliers)
-        return outliers,result
-    else:
+        return outliers,(np.max(result),np.max(100/np.array(trigger_perturbations)))
         print("未检测到异常值。")
-        return None,result
+        return None,(np.max(result),np.max(100/np.array(trigger_perturbations)))
 
 
-def train_gen(gen, model, epoch, dataloader, device, threshold=100, generator_path=None,num_class=10):
+def train_gen(gen, model, epoch, dataloader, device, threshold=20, generator_path=None,num_class=10):
     model.eval()
     all_label = []
     all_img = {}
@@ -166,37 +165,38 @@ def train_gen(gen, model, epoch, dataloader, device, threshold=100, generator_pa
         gen.train()
         optimizer = torch.optim.Adam(gen.parameters(), lr=1e-2)
         lamda1 = 0.6
-        lamda2 = 0.3
+        lamda2 = 0
         NLLLoss = nn.NLLLoss(reduction='sum')
         MSELoss = nn.MSELoss(reduction='sum')
         logsoftmax = nn.LogSoftmax(dim=1)
         Loss_sum = 0
         L_trigger_sum = 0
         L_pert_sum = 0
-        L_Gan_sum = 0
+        # L_Gan_sum = 0
         count_sum = 0
         for i, (img, ori_label) in enumerate(dataloader):
-            label = torch.randint(low=0, high=10, size=(img.shape[0],))
+            label = torch.randint(low=0, high=num_class, size=(img.shape[0],))
             one_hot_label = one_hot(label,class_count=num_class).to(device)
             img, label = img.to(device), label.to(device)
             noise = torch.randn((img.shape[0], 100)).to(device)
             G_out = gen(one_hot_label, noise)
             D_out = model(img + G_out)
             sorted_img = torch.empty_like(img)
-            # 遍历 label 中的每个值
-            for i, target in enumerate(label):
-                # 在 ori_label 中找到等于 target 的位置
-                indices = torch.nonzero(all_label == target).squeeze().item()
-                sorted_img[i] = all_img[indices]
-            ori_out = model(sorted_img)
+            # # 遍历 label 中的每个值
+            # for i, target in enumerate(label):
+            #     # 在 ori_label 中找到等于 target 的位置
+            #     indices = torch.nonzero(all_label == target).squeeze().item()
+            #     sorted_img[i] = all_img[indices]
+            # ori_out = model(sorted_img)
             D_out = logsoftmax(D_out)
             L_trigger = NLLLoss(D_out, label)
             G_out_norm = torch.sum(torch.abs(G_out)) / img.shape[0] - threshold
             L_pert = torch.max(torch.zeros_like(G_out_norm), G_out_norm)
             accuracy = torch.softmax(D_out, dim=1)
-            ori_accuary = torch.softmax(ori_out, dim=1)
-            L_Gan = MSELoss(accuracy, ori_accuary)
-            Loss = L_trigger + lamda1 * L_pert + lamda2 * L_Gan
+            # ori_accuary = torch.softmax(ori_out, dim=1)
+            # L_Gan = MSELoss(accuracy, ori_accuary)
+            # Loss = L_trigger + lamda1 * L_pert + lamda2 * L_Gan
+            Loss = L_trigger + lamda1 * L_pert
             optimizer.zero_grad()
             if Loss < bestloss:
                 bestloss = Loss
@@ -212,26 +212,16 @@ def train_gen(gen, model, epoch, dataloader, device, threshold=100, generator_pa
             Loss_sum += Loss.item()
             L_trigger_sum += L_trigger.item()
             L_pert_sum += L_pert.item()
-            L_Gan_sum += L_Gan.item()
+            # L_Gan_sum += L_Gan.item()
             count_sum += 1
-        print(
-            f'Epoch-{_}: Loss={round(Loss_sum / count_sum, 3)}, L_trigger={round(L_trigger_sum / count_sum, 3)}, L_pert={round(L_pert_sum / count_sum, 3)}, L_Gan={round(L_Gan_sum / count_sum, 3)}')
+        # print(f'Epoch-{_}: Loss={round(Loss_sum / count_sum, 3)}, L_trigger={round(L_trigger_sum / count_sum, 3)}, L_pert={round(L_pert_sum / count_sum, 3)}, L_Gan={round(L_Gan_sum / count_sum, 3)}')
+        print(f'Epoch-{_}: Loss={round(Loss_sum / count_sum, 3)}, L_trigger={round(L_trigger_sum / count_sum, 3)}, L_pert={round(L_pert_sum / count_sum, 3)}')
 
 
 def deepinspect(model, train_dataloader, tag, generator_path=None, load_generator=False):
     clean_budget = 2000
     patch_rate = 0.15
-    norm_mean = [0.485, 0.456, 0.406]
-    norm_std = [0.229, 0.224, 0.225]
-    # 创建用于加载CIFAR10数据集的transform和dataloader
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=norm_mean, std=norm_std)
-    ])
-    # transform_mnist = transforms.Compose(
-    #     [transforms.ToTensor(),
-    #      transforms.Normalize([0.5], [0.5]),
-    #      ])
+    
     all_dataset = train_dataloader.dataset
     indices = np.random.choice(len(all_dataset), clean_budget, replace=False)
     dataset = Subset(all_dataset, indices)
