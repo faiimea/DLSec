@@ -155,7 +155,7 @@ class NeuralCleanse():
         out_of_distribution=(median - stringency * MAD > l1_norms) 
         outliers = np.where(out_of_distribution)[0]
         result= stats.norm.cdf((median-l1_norms)/MAD)
-        
+        other_result=result*90/l1_norms
         for possible_target_label in outliers:
             # x_samples = []
             # for base_label in range(self.num_classes):
@@ -180,8 +180,9 @@ class NeuralCleanse():
                 self.possible_target_label.append(possible_target_label)
                 print("There is a possible backdoor to label ", possible_target_label, " with ",
                   "{0:.2f}".format(100 * acc[possible_target_label]), "% accuracy.")
-            print(outliers,result)
-            return outliers,result
+        if len(outliers>0):
+            return outliers,[np.max(result),90/np.min(l1_norms)]
+        return None,[np.max(result),90/np.min(l1_norms)]
     def mitigate(self,test_X,test_Y):
         BATCH_SIZE=64
         TARGET_LS = self.possible_target_label

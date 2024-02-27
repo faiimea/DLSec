@@ -140,9 +140,10 @@ def detect_triger(gen, device, alpha=0.25,num_class=10):
     outliers = np.where(other_result>1-alpha)[0]
     if len(outliers) > 0:
         print("存在异常值！", outliers)
-        return outliers,(np.max(result),np.max(100/np.array(trigger_perturbations)))
+        return outliers,[np.max(result),np.max(100/np.array(trigger_perturbations))]
+    else:
         print("未检测到异常值。")
-        return None,(np.max(result),np.max(100/np.array(trigger_perturbations)))
+        return None,[np.max(result),np.max(100/np.array(trigger_perturbations))]
 
 
 def train_gen(gen, model, epoch, dataloader, device, threshold=20, generator_path=None,num_class=10):
