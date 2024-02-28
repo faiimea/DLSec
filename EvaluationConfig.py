@@ -5,9 +5,10 @@ import torch
 # model = models.resnet50(pretrained=True)
 # model.load_state_dict(torch.load('path_to_pretrained_weights.pth'))
 # torchvision.models.ResNet(torchvision.models.resnet.BasicBlock, [2, 2, 2, 2])
-model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_shufflenetv2_x0_5", pretrained=True)
-# model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
+# model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_shufflenetv2_x0_5", pretrained=True)
+model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
 # model.load_state_dict(torch.load('./Backdoor/LocalModels/20231229-161017-BadnetCIFAR10.pth', map_location=torch.device('cuda')))
+model.load_state_dict(torch.load('./Backdoor/LocalModels/pth', map_location=torch.device('cuda')))
 
 FRIENDLYNOISE_config = {
     'friendly_epochs': 30,
@@ -31,7 +32,7 @@ FRIENDLYNOISE_config = {
 evaluation_params = {
     'model': model,
     'adversarial_method': 'fgsm',
-    'backdoor_method': 'DeepInspect',
+    'backdoor_method': 'NeuralCleanse',#1:DeepInspect 2:NeuralCleanse 3:Tabor
     'allow_backdoor_defense': True,
     'datapoison_method': 'gradient-matching',
     'datapoison_reinforce_method': 'FriendlyNoise',
@@ -41,8 +42,8 @@ evaluation_params = {
     'device': 'cuda',
     'tag': "cifar10_shufflenetv2_x0_5",
     # 以下为部分方法会使用到的参数
-    'DEEPINSPECT_generator_path': './Backdoor/Defense/DeepInspectResult/generator.pth',
-    'DEEPINSPECT_load_generator': False,
+    'generator_path': './Backdoor/Defense/DeepInspectResult/generator.pth',
+    'load_generator': False,
     'FRIENDLYNOISE_extra_config':FRIENDLYNOISE_config,
     # 以下为投毒相关参数
     'scenario': 'from-scratch',
