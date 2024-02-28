@@ -30,10 +30,9 @@ def BackdoorDefense(dataloader,model,method='NeuralCleanse',triggerpath='default
     else:
         print("请选择正确的后门检测方法:\n1:NeuralCleanse\t2:Tabor\t3:DeepInspect")
     if not load_generator:
-        pass
-        # DF.reverse_engineer_triggers()
+        DF.reverse_engineer_triggers()
     else:
-        shutil.move(generator_path,'.'+path+"/triggers.npy")
+        shutil.copy(generator_path,'.'+path+"/triggers.npy")
 
     outlier,trigger=DF.backdoor_detection()
     DF.mitigate(test_X=org_img,test_Y=org_label)
