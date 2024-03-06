@@ -37,7 +37,7 @@ def fit(model, train_gen, verbose, steps_per_epoch, learning_rate, loss, device=
     model.train()
     # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.0001)
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=1e-4)
-    for epoch in range(20):
+    for epoch in range(10):
         if (epoch % change_lr_every == change_lr_every - 1):
             learning_rate = learning_rate / 5
             # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)

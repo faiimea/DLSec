@@ -8,9 +8,8 @@ def run_datapoison_reinforce(model=None, method='FriendlyNoise', train_dataloade
         return reinforced_model_path,{"After_Datapoison_Defense_ACC":Reinforced_ACC}
 
 
-def run_datapoison_test(model=None, method='poison-frogs', train_dataloader=None, params=None):
-    if method == 'poison-frogs':
-        target = DatapoisonAttack(params)
-        datapoisonrst = target.test()
+def run_datapoison_test(params=None):
+    target = DatapoisonAttack(params)
+    datapoisonrst = target.test()
 
     return datapoisonrst

@@ -16,14 +16,28 @@ from Datapoison.Defense.Friendly_noise import *
 
 
 def ModelEvaluation(evaluation_params=None):
+    '''
+    进行模型评测
+    @param evaluation_params: 相关参数
+    @return:
+    '''
     train_dataloader, test_dataloader = dataset_preprocess(name=evaluation_params['use_dataset'], batch_size=evaluation_params['batch_size'])
-    isBackdoored = run_test_on_model(evaluation_params['model'], evaluation_params['adversarial_method'], evaluation_params['allow_backdoor_defense'], evaluation_params['backdoor_method'], evaluation_params['datapoison_method'], evaluation_params['run_datapoison_reinforcement'],
-                                     evaluation_params['datapoison_reinforce_method'], train_dataloader, test_dataloader, evaluation_params)
+    ReinforcedModel_dict_path = run_test_on_model(evaluation_params['model'], evaluation_params['allow_backdoor_defense'], evaluation_params['backdoor_method'], evaluation_params['datapoison_method'], evaluation_params['run_datapoison_reinforcement'],
+                                                  evaluation_params['datapoison_reinforce_method'], train_dataloader, test_dataloader, evaluation_params)
 
-    # run_test_on_model(ReinforcedModel, adversarial_method, backdoor_method, datapoison_method)
+    # 防御后的模型再测试
+    # evaluation_params['model'].load_state_dict(torch.load(ReinforcedModel_dict_path))
+    # run_test_on_model(evaluation_params['model'], evaluation_params['allow_backdoor_defense'], evaluation_params['backdoor_method'], evaluation_params['datapoison_method'], evaluation_params['run_datapoison_reinforcement'],
+    #                                  evaluation_params['datapoison_reinforce_method'], train_dataloader, test_dataloader, evaluation_params)
 
 
 def dataset_preprocess(name, batch_size=64):
+    '''
+    将用户指定的数据集加载为Dataloader
+    @param name: 数据集名
+    @param batch_size:
+    @return:
+    '''
     if name is None:
         return None, None
     elif name in torchvision.datasets.__all__:
@@ -47,11 +61,24 @@ def dataset_preprocess(name, batch_size=64):
     return DataLoader(train_dataset, batch_size=batch_size, shuffle=True), DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 
-def run_test_on_model(Model2BeEvaluated, adversarial_method, allow_backdoor_defense, backdoor_method, datapoison_method, run_datapoison_reinforcement, datapoison_reinforce_method, train_dataloader=None, test_dataloader=None, params=None):
-    adversarial_rst = adversarial_test(Model2BeEvaluated, adversarial_method, test_dataloader, params)
+def run_test_on_model(Model2BeEvaluated, allow_backdoor_defense, backdoor_method, datapoison_method, run_datapoison_reinforcement, datapoison_reinforce_method, train_dataloader=None, test_dataloader=None, params=None):
+    '''
+    单轮测试
+    @param Model2BeEvaluated: 待测模型
+    @param allow_backdoor_defense: 是否要执行后门防御
+    @param backdoor_method: 后门测试方式
+    @param datapoison_method: 数据投毒测试
+    @param run_datapoison_reinforcement:是否要执行数据投毒防御
+    @param datapoison_reinforce_method: 数据投毒测试方式
+    @param train_dataloader: 各模块中用于训练的dataloader
+    @param test_dataloader: 各模块中用于测试的dataloader
+    @param params: 原始参数，部分方法会使用其中对应部分的参数
+    @return: 防御后的模型权重文件的路径，如果不执行防御则为None
+    '''
+    adversarial_rst = adversarial_test(Model2BeEvaluated,train_dataloader=test_dataloader, params=params)
     isBackdoored, backdoor_rst, ReinforcedModel_dict_path = backdoor_detect_and_defense(allow_defense=allow_backdoor_defense, Model2BeEvaluated=Model2BeEvaluated, method=backdoor_method, train_dataloader=train_dataloader, params=params)
-    datapoison_test_rst = datapoison_test(Model2BeEvaluated=Model2BeEvaluated, method=datapoison_method, train_dataloader=train_dataloader, params=params)
-    ReinforcedModel_dict_path = None
+    datapoison_test_rst = datapoison_test(params=params)
+
     if run_datapoison_reinforcement:
         if ReinforcedModel_dict_path is not None:
             DatapoisonReinforceModel = copy.deepcopy(Model2BeEvaluated)
@@ -62,21 +89,15 @@ def run_test_on_model(Model2BeEvaluated, adversarial_method, allow_backdoor_defe
     else:
         datapoison_defense_rst = None
 
-    process_result(params['tag'],adversarial_rst, backdoor_rst, datapoison_test_rst, datapoison_defense_rst)
-    return isBackdoored
-
-
-'''
-在此调用对抗攻击测试方法，传入待测模型、攻击方式、数据集（如果指定了）等用户设置的参数，返回测试结果：【原始与对抗样本准确率、准确率差，准确率降低一定比例（如50%）时对抗样本与原始样本差异度（p阶范数距离），】
-进阶指标：【对抗样本对噪声容忍度，高斯模糊鲁棒性，图像压缩鲁棒性，生成对抗样本所需时间】
-'''
+    process_result(params['tag'], adversarial_rst, backdoor_rst, datapoison_test_rst, datapoison_defense_rst)
+    return ReinforcedModel_dict_path
 
 
 def adversarial_test(Model2BeEvaluated, method='fgsm', train_dataloader=None, params=None):
     """
-
+    对抗样本攻击测试
     @param Model2BeEvaluated:
-    @param method:
+    @param method: 目前对抗样本测试将每个方法都进行了执行，不需要特别指定method，但尚未从旧版代码中删除
     @param train_dataloader:
     @param params:
     @return: 一个字典，键形如’ACC-0.005‘，’fgsm-0.005‘，值为相应准确率
@@ -100,6 +121,15 @@ def adversarial_test(Model2BeEvaluated, method='fgsm', train_dataloader=None, pa
 
 
 def backdoor_detect_and_defense(allow_defense=True, Model2BeEvaluated=None, method='NeuralCleanse', train_dataloader=None, params=None):
+    '''
+    后门检测与防御
+    @param allow_defense: 是否执行防御
+    @param Model2BeEvaluated: 待测模型
+    @param method: 后门检测方法
+    @param train_dataloader: 训练集
+    @param params: 原始参数
+    @return: 是否有后门、后门评测结果、防御后模型权重文件路径
+    '''
     print("开始后门检测")
     isBackdoored, backdoor_rst, ReinforcedModel_dict_path = run_backdoor_defense(allow_defense, Model2BeEvaluated, method, train_dataloader, params)
     print("-" * 20, "后门攻击评测结果", "-" * 20)
@@ -112,29 +142,48 @@ def backdoor_detect_and_defense(allow_defense=True, Model2BeEvaluated=None, meth
     return isBackdoored, backdoor_rst, ReinforcedModel_dict_path
 
 
-def datapoison_test(Model2BeEvaluated=None, method=None, train_dataloader=None, params=None):
-    # 在此执行数据投毒测试，如果run_defense为True则生成加强模型
-    # 返回投毒后概率
+def datapoison_test(params=None):
+    '''
+    数据投毒检测
+    @param params: 原始参数
+    @return: 数据投毒检测评测结果
+    '''
     print("开始投毒检测")
-    datapoison_test_rst = run_datapoison_test(model=Model2BeEvaluated, method=method, train_dataloader=train_dataloader, params=params)
+    datapoison_test_rst = run_datapoison_test(params=params)
 
     return datapoison_test_rst
 
 
 def datapoison_defense(TargetModel=None, method=None, train_dataloader=None, params=None):
+    '''
+    数据投毒防御
+    @param TargetModel: 待测模型
+    @param method: 数据投毒防御方法
+    @param train_dataloader: 训练集
+    @param params: 原始参数
+    @return: 防御后模型路径、数据投毒防御结果
+    '''
     print("开始投毒防御")
     reinforced_model_path, datapoison_defense_rst = run_datapoison_reinforce(TargetModel, method=method, train_dataloader=train_dataloader, params=params)
     return reinforced_model_path, datapoison_defense_rst
 
 
 def process_result(tag="DefaultTag", adversarial_rst=None, backdoor_rst=None, datapoison_rst=None, datapoison_defense_rst=None):
+    """
+    对所有评测结果进行汇总处理，目前是将结果保存在一个csv内
+    @param tag: 标签
+    @param adversarial_rst:对抗样本评测结果
+    @param backdoor_rst: 后门检测与防御评测结果
+    @param datapoison_rst: 数据投毒检测评测结果
+    @param datapoison_defense_rst: 数据投毒防御评测结果
+    @return:
+    """
     print("Evaluation Results for", tag)
     print('adversarial_rst:', adversarial_rst)
-    # {'ACC-0.005': 81.25, 'NoisyACC-0.005': 17.410714285714285, 'BlurredACC-0.005': 8.258928571428571, 'CompressedACC-0.005': 11.830357142857142, 'ACC-0.01': 78.34821428571429, 'NoisyACC-0.01': 13.616071428571429, 'BlurredACC-0.01': 10.491071428571429, 'CompressedACC-0.01': 8.928571428571429, 'fgsm-0.005': 84.375, 'pgd-0.005': 84.375, 'difgsm-0.005': 54.6875, 'mifgsm-0.005': 54.6875, 'nifgsm-0.005': 54.6875, 'sinifgsm-0.005': 54.6875, 'tifgsm-0.005': 61.71875, 'vmifgsm-0.005': 54.6875, 'vnifgsm-0.005': 56.25}
     print('backdoor_rst:', backdoor_rst)
     print('datapoison_rst:', datapoison_rst)
     print('datapoison_defense_rst:', datapoison_defense_rst)
-    final_rst = {'tag':tag}
+    final_rst = {'tag': tag}
     if adversarial_rst is not None:
         final_rst.update(adversarial_rst)
     if backdoor_rst is not None:
@@ -145,11 +194,11 @@ def process_result(tag="DefaultTag", adversarial_rst=None, backdoor_rst=None, da
         final_rst.update(datapoison_defense_rst)
 
     with open('./ModelResults.csv', 'r', newline='') as csvfile:
-        data=[]
+        data = []
         reader = csv.DictReader(csvfile)
         for row in reader:
             data.append(row)
-        headers=set(data[0].keys())
+        headers = set(data[0].keys())
         headers.update(final_rst.keys())
         data.append(final_rst)
 

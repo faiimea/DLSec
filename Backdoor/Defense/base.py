@@ -10,9 +10,8 @@ import os
 import torch
 
 
-def BackdoorDefense(dataloader,model,method='NeuralCleanse',triggerpath='default',generator_path=None,load_generator=False):
-
-    path='/'+triggerpath
+def BackdoorDefense(dataloader, model, method='NeuralCleanse', triggerpath='default', generator_path=None, load_generator=False):
+    path = '/' + triggerpath
     org_img = []
     org_label = []
     for data in dataloader.dataset:
@@ -22,24 +21,26 @@ def BackdoorDefense(dataloader,model,method='NeuralCleanse',triggerpath='default
     org_img = np.array(org_img)
     org_label = np.array(org_label)
     num_classes = len(set(org_label))
-    DF=None
-    if method=='NeuralCleanse':
-        DF = NeuralCleanse(X=org_img, Y=org_label, model=model, num_samples=25, num_classes=num_classes,path=path)
-    elif method=='Tabor':
-        DF = Tabor(X=org_img, Y=org_label, model=model, num_samples=25, num_classes=num_classes,path=path)
+    DF = None
+    if method == 'NeuralCleanse':
+        DF = NeuralCleanse(X=org_img, Y=org_label, model=model, num_samples=25, num_classes=num_classes, path=path)
+    elif method == 'Tabor':
+        DF = Tabor(X=org_img, Y=org_label, model=model, num_samples=25, num_classes=num_classes, path=path)
     else:
         print("请选择正确的后门检测方法:\n1:NeuralCleanse\t2:Tabor\t3:DeepInspect")
     if not load_generator:
         DF.reverse_engineer_triggers()
     else:
-        shutil.copy(generator_path,'.'+path+"/triggers.npy")
+        shutil.copy(generator_path, '.' + path + "/triggers.npy")
 
-    outlier,trigger=DF.backdoor_detection()
-    DF.mitigate(test_X=org_img,test_Y=org_label)
-    new_model_save_path = os.getcwd() + "/"+triggerpath
+    outlier, trigger = DF.backdoor_detection()
+    if outlier is None:
+        return [], [0,0], None, None
+
+    DF.mitigate(test_X=org_img, test_Y=org_label)
+    new_model_save_path = os.getcwd() + "/" + triggerpath+'/defense_rst.pth'
     torch.save(DF.model.state_dict(), new_model_save_path)
-    return outlier,trigger,DF.model,new_model_save_path
-
+    return outlier, trigger, DF.model, new_model_save_path
 
 
 if __name__ == "__main__":
