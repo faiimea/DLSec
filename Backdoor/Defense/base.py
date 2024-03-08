@@ -29,7 +29,8 @@ def BackdoorDefense(dataloader, model, method='NeuralCleanse', triggerpath='defa
     else:
         print("请选择正确的后门检测方法:\n1:NeuralCleanse\t2:Tabor\t3:DeepInspect")
     if not load_generator:
-        DF.reverse_engineer_triggers()
+        pass
+        # DF.reverse_engineer_triggers()
     else:
         shutil.copy(generator_path, '.' + path + "/triggers.npy")
 
@@ -37,7 +38,7 @@ def BackdoorDefense(dataloader, model, method='NeuralCleanse', triggerpath='defa
     if outlier is None:
         return [], [0,0], None, None
 
-    DF.mitigate(test_X=org_img, test_Y=org_label)
+    DF.mitigate()
     new_model_save_path = os.getcwd() + "/" + triggerpath+'/defense_rst.pth'
     torch.save(DF.model.state_dict(), new_model_save_path)
     return outlier, trigger, DF.model, new_model_save_path

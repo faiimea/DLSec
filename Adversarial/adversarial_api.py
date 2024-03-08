@@ -59,7 +59,7 @@ def dataset_preprocess():
     return testloader
 
 # 高斯噪声
-def add_gaussian_noise(image, mean=0, std=1):
+def add_gaussian_noise(image, mean=0, std=0.3):
     """
     在图像上添加高斯噪声
     """
@@ -83,7 +83,7 @@ def apply_gaussian_blur(image, radius=2):
     return blurred_images
 
 # 图像压缩
-def compress_image(image, quality=85):
+def compress_image(image, quality=98):
     """
     对图像进行压缩
     """

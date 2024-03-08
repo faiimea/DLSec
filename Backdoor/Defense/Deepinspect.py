@@ -108,10 +108,9 @@ def test_clean(model, source_loader, device):
     return acc.item()
 
 
-def detect_triger(gen, device, alpha=0.25,num_class=10):
+def detect_triger(gen, device, alpha=0.05,num_class=10):
     noise = torch.randn((100, 100)).to(device)
     trigger_perturbations = []
-    
     for target_class in range(num_class):
         label = torch.ones(100, dtype=torch.int64) * target_class
         one_hot_label = one_hot(label,class_count=num_class).to(device)
@@ -119,8 +118,8 @@ def detect_triger(gen, device, alpha=0.25,num_class=10):
         abs_sum = torch.sum(torch.abs(G_out.view(G_out.shape[0], -1)), dim=1)
         value, index = torch.min(abs_sum, dim=0)
         trigger_perturbations.append(value.item())
-        
 
+    relative_size = G_out[0].shape[1] * 25
     # 计算触发器扰动的中位数
     median = np.median(trigger_perturbations)
     left_subgroup = [(i, median-x) for i, x in enumerate(trigger_perturbations) if x < median]
@@ -129,51 +128,38 @@ def detect_triger(gen, device, alpha=0.25,num_class=10):
     # 计算触发器扰动的标准差估计值
     mad = 1.4826 * np.median(np.abs([item[1] for item in left_subgroup] - median_1), axis=0)
     result= stats.norm.cdf((median-trigger_perturbations-median_1)/mad)
-    
-    other_result=result*90/trigger_perturbations
+
+    other_result=result*relative_size/trigger_perturbations
     # 计算假设测试的显著性水平（α）alpha
 
     # 根据显著性水平计算截断阈值（c）
     
 
     # 根据 DMAD 检测标准，判断是否存在异常值
-    outliers = np.where(other_result>1-alpha)[0]
-    if len(outliers) > 0:
+    outliers = np.where(result>1-alpha)[0]
+    if len(outliers) > 0 and other_result[outliers]>0.8:
         print("存在异常值！", outliers)
-        return outliers,[np.max(result),np.max(100/np.array(trigger_perturbations))]
+        return outliers,[np.max(result),np.max(relative_size/np.array(trigger_perturbations))]
     else:
         print("未检测到异常值。")
-        return None,[np.max(result),np.max(100/np.array(trigger_perturbations))]
+        return None,[np.max(result),np.max(relative_size/np.array(trigger_perturbations))]
 
 
 def train_gen(gen, model, epoch, dataloader, device, threshold=20, generator_path=None,num_class=10):
     model.eval()
-    all_label = []
-    all_img = {}
     patience = 30
     noimpovement = 0
     bestloss = float("inf")
-    for img, label in dataloader.dataset:
-        if label not in all_label:
-            all_img[label] = img
-            all_label.append(label)
-        if len(all_label) == num_class:
-            all_label = torch.tensor(all_label).to(device)
-            all_img = list(all_img.values())  # 获取字典中的张量值列表
-            all_img = torch.stack(all_img).to(device)
-            break
+
     for _ in range(1, epoch + 1):
         gen.train()
         optimizer = torch.optim.Adam(gen.parameters(), lr=1e-2)
         lamda1 = 0.6
-        lamda2 = 0
         NLLLoss = nn.NLLLoss(reduction='sum')
-        MSELoss = nn.MSELoss(reduction='sum')
         logsoftmax = nn.LogSoftmax(dim=1)
         Loss_sum = 0
         L_trigger_sum = 0
         L_pert_sum = 0
-        # L_Gan_sum = 0
         count_sum = 0
         for i, (img, ori_label) in enumerate(dataloader):
             label = torch.randint(low=0, high=num_class, size=(img.shape[0],))
@@ -182,21 +168,12 @@ def train_gen(gen, model, epoch, dataloader, device, threshold=20, generator_pat
             noise = torch.randn((img.shape[0], 100)).to(device)
             G_out = gen(one_hot_label, noise)
             D_out = model(img + G_out)
-            sorted_img = torch.empty_like(img)
-            # # 遍历 label 中的每个值
-            # for i, target in enumerate(label):
-            #     # 在 ori_label 中找到等于 target 的位置
-            #     indices = torch.nonzero(all_label == target).squeeze().item()
-            #     sorted_img[i] = all_img[indices]
-            # ori_out = model(sorted_img)
+
             D_out = logsoftmax(D_out)
             L_trigger = NLLLoss(D_out, label)
             G_out_norm = torch.sum(torch.abs(G_out)) / img.shape[0] - threshold
             L_pert = torch.max(torch.zeros_like(G_out_norm), G_out_norm)
-            accuracy = torch.softmax(D_out, dim=1)
-            # ori_accuary = torch.softmax(ori_out, dim=1)
-            # L_Gan = MSELoss(accuracy, ori_accuary)
-            # Loss = L_trigger + lamda1 * L_pert + lamda2 * L_Gan
+
             Loss = L_trigger + lamda1 * L_pert
             optimizer.zero_grad()
             if Loss < bestloss:
@@ -213,7 +190,6 @@ def train_gen(gen, model, epoch, dataloader, device, threshold=20, generator_pat
             Loss_sum += Loss.item()
             L_trigger_sum += L_trigger.item()
             L_pert_sum += L_pert.item()
-            # L_Gan_sum += L_Gan.item()
             count_sum += 1
         # print(f'Epoch-{_}: Loss={round(Loss_sum / count_sum, 3)}, L_trigger={round(L_trigger_sum / count_sum, 3)}, L_pert={round(L_pert_sum / count_sum, 3)}, L_Gan={round(L_Gan_sum / count_sum, 3)}')
         print(f'Epoch-{_}: Loss={round(Loss_sum / count_sum, 3)}, L_trigger={round(L_trigger_sum / count_sum, 3)}, L_pert={round(L_pert_sum / count_sum, 3)}')

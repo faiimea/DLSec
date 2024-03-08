@@ -7,6 +7,8 @@ import torch
 import numpy as np
 from tqdm import tqdm
 import random
+from sklearn.model_selection import train_test_split
+
 class NeuralCleanse():
     def __init__(self, X, Y, model,num_samples, num_classes=10,path='/default'):
         self.X = X
@@ -101,7 +103,7 @@ class NeuralCleanse():
                 print(e)
                 print("you need to reverse engineer triggers, first.")
                 exit()
-        _, _, l1_norms,acc = zip(*self.triggers)
+        delta, _, l1_norms,acc = zip(*self.triggers)
         stringency = 1.5
         median = np.median(l1_norms, axis=0)
         MAD = 1.4826 * np.median(np.abs(l1_norms - median), axis=0)
@@ -114,18 +116,26 @@ class NeuralCleanse():
                 self.possible_target_label.append(possible_target_label)
                 print("There is a possible backdoor to label ", possible_target_label, " with ",
                   "{0:.2f}".format(100 * acc[possible_target_label]), "% accuracy.")
+        relative_size=delta[0].shape[2]*25
         if len(outliers>0):
-            return outliers,[np.max(result),90/np.min(l1_norms)]
-        return None,[np.max(result),90/np.min(l1_norms)]
-    def mitigate(self,test_X,test_Y):
+            return outliers,[np.max(result),relative_size/np.min(l1_norms)]
+        return None,[np.max(result),relative_size/np.min(l1_norms)]
+    def mitigate(self):
         BATCH_SIZE = 64
         TARGET_LS = self.possible_target_label
+
         NUM_LABEL = len(TARGET_LS)
+        if NUM_LABEL==0:
+            print("there is no backdoor label in this model")
+            return
         PER_LABEL_RARIO = 0.2
         INJECT_RATIO = (PER_LABEL_RARIO * NUM_LABEL) / (PER_LABEL_RARIO * NUM_LABEL + 1)
-        train_size = len(self.Y)
-        train_X = self.X
-        train_Y = self.Y
+        train_X, train_Y, test_X, test_Y = train_test_split(
+            self.X, self.Y,
+            train_size=0.8, shuffle=True,
+            stratify=self.Y
+        )
+        train_size = len(train_Y)
         mask, pattern = self.triggers[TARGET_LS[0]][1].numpy(), self.triggers[TARGET_LS[0]][0].numpy()
         train_gen = DataGenerator(mask, pattern,TARGET_LS, train_X, train_Y, inject_ratio=INJECT_RATIO, BATCH_SIZE=BATCH_SIZE,is_test=0)
         test_adv_gen = DataGenerator(mask, pattern,TARGET_LS, test_X, test_Y,inject_ratio=1, BATCH_SIZE=BATCH_SIZE, is_test=1)
