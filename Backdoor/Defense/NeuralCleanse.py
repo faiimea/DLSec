@@ -38,7 +38,7 @@ class NeuralCleanse():
             x_samples = np.vstack(x_samples)
             y_t = np.ones((x_samples.shape[0])) * target_label
             y_t = torch.nn.functional.one_hot(torch.tensor(y_t, dtype=torch.long), self.num_classes).float().to(self.device)
-            opt_round = 100
+            opt_round = 200
             m = torch.tensor(np.random.uniform(0.0, 1.0, (self.X.shape[1], self.X.shape[2],1)), dtype=torch.float32,requires_grad=True)
             delta = torch.tensor(np.random.uniform(0.0, 1.0, (self.X.shape[1], self.X.shape[2], self.X.shape[3])),dtype=torch.float32,requires_grad=True)
             lmbda=0.03

@@ -36,18 +36,15 @@ if __name__ == "__main__":
             'batch_size': 128,
             'optimizer': 'sgd',
             'criterion': torch.nn.CrossEntropyLoss(),
-            'local_state_path':"20231229-161017-BadnetCIFAR10.pth",  # LocalModels下相对路径
+            'local_state_path':"20231229-161017-BadnetCIFAR10forDI.pth",  # LocalModels下相对路径
             'trigger_path': './Attack/triggers/trigger_10.png',
             'trigger_size': (5, 5)
         }
         badnet_victim = Badnets(**Badnets_params)
         # badnet_victim.train()
         badnet_victim.test()
-        # badnet_victim.display()
-        DetectedBackdoor, ReinforcedModel, new_model_dict_path = deepinspect(badnet_victim.model,test1229 , tag="AfterDefenseTest")
-        # torch.save(badnet_victim.model, "./LocalModels/DIbadnetcifar10.pth")
-        badnet_victim.model=ReinforcedModel
-        badnet_victim.test()
+        badnet_victim.display()
+
 
     elif attack_mode=="WaNet":
         WaNet_params = {
@@ -74,10 +71,10 @@ if __name__ == "__main__":
 
     elif attack_mode=="Blend":
         Blend_params = {
-            'tag': "BlendMNIST",
+            'tag': "BlendCIFAR10",
             'device': 'cuda',
             'model': model,
-            'dataset': torchvision.datasets.MNIST,
+            'dataset': torchvision.datasets.CIFAR10,
             'poison_rate': 0.05,
             'lr': 0.05,
             'target_label': 3,

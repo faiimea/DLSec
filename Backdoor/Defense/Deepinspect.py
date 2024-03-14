@@ -9,7 +9,7 @@ from torch.utils.data import Subset
 import scipy.stats as stats
 import copy
 import os
-
+from Backdoor.Defense.gen import Generator
 '''
 deepinspect检测的关键在于训练一个generator来生成后门，
 这里由于生成后门的网络和数据集shape有关，下面写了针对cifar10和mnist的结构，
@@ -22,50 +22,50 @@ deepinspect检测的关键在于训练一个generator来生成后门，
 '''
 
 
-class Generator(nn.Module):
-    """cifar数据集"""
-
-    def __init__(self, label_num=10, channels=3, height=32, width=32):
-        super(Generator, self).__init__()
-        self.x, self.y = int(height / 4), int(width / 4)
-        self.k1, self.k2 = height % 4, width % 4
-        if self.k1 == 0:
-            self.k1, self.x = 4, self.x - 1
-        if self.k2 == 0:
-            self.k2, self.y = 4, self.y - 1
-        self.linear1 = nn.Linear(label_num, 128 * self.x * self.y)
-        self.bn1 = nn.BatchNorm1d(128 * self.x * self.y)
-        self.linear2 = nn.Linear(100, 128 * self.x * self.y)
-        self.bn2 = nn.BatchNorm1d(128 * self.x * self.y)
-        self.deconv1 = nn.ConvTranspose2d(256, 128,
-                                          kernel_size=(4, 4),
-                                          padding=1)
-        '''output=(input-1)*stride-2*padding+kernel_size+(output+2*padding-kernel_size)%stride'''
-        self.bn3 = nn.BatchNorm2d(128)
-        self.deconv2 = nn.ConvTranspose2d(128, 64,
-                                          kernel_size=(4, 4),
-                                          stride=2,
-                                          padding=1)
-        self.bn4 = nn.BatchNorm2d(64)
-        self.deconv3 = nn.ConvTranspose2d(64, channels,
-                                          kernel_size=(self.k1, self.k2),
-                                          stride=2,
-                                          padding=1)
-
-    def forward(self, x1, x2):
-        x1 = F.relu(self.linear1(x1))
-        x1 = self.bn1(x1)
-        x1 = x1.view(-1, 128, self.x, self.y)
-        x2 = F.relu(self.linear2(x2))
-        x2 = self.bn2(x2)
-        x2 = x2.view(-1, 128, self.x, self.y)
-        x = torch.cat([x1, x2], axis=1)
-        x = F.relu(self.deconv1(x))
-        x = self.bn3(x)
-        x = F.relu(self.deconv2(x))
-        x = self.bn4(x)
-        x = torch.tanh(self.deconv3(x))
-        return x
+# class Generator(nn.Module):
+#     """cifar数据集"""
+#
+#     def __init__(self, label_num=10, channels=3, height=32, width=32):
+#         super(Generator, self).__init__()
+#         self.x, self.y = int(height / 4), int(width / 4)
+#         self.k1, self.k2 = height % 4, width % 4
+#         if self.k1 == 0:
+#             self.k1, self.x = 4, self.x - 1
+#         if self.k2 == 0:
+#             self.k2, self.y = 4, self.y - 1
+#         self.linear1 = nn.Linear(label_num, 128 * self.x * self.y)
+#         self.bn1 = nn.BatchNorm1d(128 * self.x * self.y)
+#         self.linear2 = nn.Linear(100, 128 * self.x * self.y)
+#         self.bn2 = nn.BatchNorm1d(128 * self.x * self.y)
+#         self.deconv1 = nn.ConvTranspose2d(256, 128,
+#                                           kernel_size=(4, 4),
+#                                           padding=1)
+#         '''output=(input-1)*stride-2*padding+kernel_size+(output+2*padding-kernel_size)%stride'''
+#         self.bn3 = nn.BatchNorm2d(128)
+#         self.deconv2 = nn.ConvTranspose2d(128, 64,
+#                                           kernel_size=(4, 4),
+#                                           stride=2,
+#                                           padding=1)
+#         self.bn4 = nn.BatchNorm2d(64)
+#         self.deconv3 = nn.ConvTranspose2d(64, channels,
+#                                           kernel_size=(self.k1, self.k2),
+#                                           stride=2,
+#                                           padding=1)
+#
+#     def forward(self, x1, x2):
+#         x1 = F.relu(self.linear1(x1))
+#         x1 = self.bn1(x1)
+#         x1 = x1.view(-1, 128, self.x, self.y)
+#         x2 = F.relu(self.linear2(x2))
+#         x2 = self.bn2(x2)
+#         x2 = x2.view(-1, 128, self.x, self.y)
+#         x = torch.cat([x1, x2], axis=1)
+#         x = F.relu(self.deconv1(x))
+#         x = self.bn3(x)
+#         x = F.relu(self.deconv2(x))
+#         x = self.bn4(x)
+#         x = torch.tanh(self.deconv3(x))
+#         return x
 
 
 def one_hot(x, class_count=10):
@@ -119,7 +119,7 @@ def detect_triger(gen, device, alpha=0.05,num_class=10):
         value, index = torch.min(abs_sum, dim=0)
         trigger_perturbations.append(value.item())
 
-    relative_size = G_out[0].shape[1] * 25
+    relative_size = G_out[0].shape[0] * 25
     # 计算触发器扰动的中位数
     median = np.median(trigger_perturbations)
     left_subgroup = [(i, median-x) for i, x in enumerate(trigger_perturbations) if x < median]
@@ -269,6 +269,6 @@ def deepinspect(model, train_dataloader, tag, generator_path=None, load_generato
         print("防御前的后门准确率：{:.2f}%".format(bdacc1 * 100))
         print("防御后的分类准确率：{:.2f}%".format(cda2 * 100))
         print("防御后的后门准确率：{:.2f}%".format(bdacc2 * 100))
-    new_model_save_path = os.getcwd() + "/Backdoor/Defense/DeepInspectResult/" + tag
+    new_model_save_path = os.getcwd() + "/Backdoor/Defense/DeepInspectResult/"+ tag
     torch.save(newmodel.state_dict(), new_model_save_path)
     return outliers, trigger,newmodel, new_model_save_path

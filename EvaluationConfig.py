@@ -8,8 +8,10 @@ import torch
 # model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_shufflenetv2_x0_5", pretrained=True)
 # model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet20", pretrained=True)
 model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
-model.load_state_dict(torch.load('./Backdoor/LocalModels/20231229-161017-BadnetCIFAR10.pth', map_location=torch.device('cuda')))
+# model.load_state_dict(torch.load('./Backdoor/LocalModels/pth'))
+model.load_state_dict(torch.load('./Backdoor/checkpoints/20231229-161017-BadnetCIFAR10forDI.pth'))
 
+model.to("cuda")
 FRIENDLYNOISE_config = {
     'friendly_epochs': 30,
     'mu': 1,
