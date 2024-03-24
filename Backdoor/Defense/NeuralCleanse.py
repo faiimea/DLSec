@@ -41,7 +41,7 @@ class NeuralCleanse():
             opt_round = 200
             m = torch.tensor(np.random.uniform(0.0, 1.0, (self.X.shape[1], self.X.shape[2],1)), dtype=torch.float32,requires_grad=True)
             delta = torch.tensor(np.random.uniform(0.0, 1.0, (self.X.shape[1], self.X.shape[2], self.X.shape[3])),dtype=torch.float32,requires_grad=True)
-            lmbda=0.03
+            lmbda=0.1
             delta_opt=torch.optim.Adam([delta],lr=0.5)
             m_opt = torch.optim.Adam([m], lr=0.5)
             no_improvement = 0
@@ -79,7 +79,7 @@ class NeuralCleanse():
                     # 防止trigger和norm越界
                     torch.clip_(m, 0, 1)
                     torch.clip_(delta, 0, 1)
-                lmbda = 0.03*(r+no_improvement)/(opt_round+no_improvement)+0.03
+                lmbda = 0.1*(r+no_improvement)/(opt_round+no_improvement)+0.1
             draw_trigger(M=m.detach().clone(), Delta=delta.detach().clone(),
                               file_name='.'+self.path+'/triggers/trigger-' + str(target_label))
             with torch.no_grad():
@@ -142,12 +142,14 @@ class NeuralCleanse():
         test_clean_gen = DataGenerator(mask, pattern,TARGET_LS, test_X, test_Y, inject_ratio=0,BATCH_SIZE=BATCH_SIZE, is_test=1)
         loss = torch.nn.CrossEntropyLoss()
         lr = 0.005
-        fit(self.model,train_gen, verbose=1, steps_per_epoch=int(train_size // BATCH_SIZE), learning_rate=lr,loss=loss, device=self.device,change_lr_every=10)
+        newmodel = copy.deepcopy(self.model)
+        fit(newmodel,train_gen, verbose=1, steps_per_epoch=int(train_size // BATCH_SIZE), learning_rate=lr,loss=loss, device=self.device,change_lr_every=10)
         print("Evaluating model")
         number_images = len(test_Y)
         steps_per_epoch = int(number_images // BATCH_SIZE)
-        acc, _ =evaluate(self.model,test_clean_gen, steps_per_epoch, loss,1, device=self.device)
-        backdoor_acc, _ =evaluate(self.model,test_adv_gen, steps_per_epoch, loss, 1,device=self.device)
+        acc, _ =evaluate(newmodel,test_clean_gen, steps_per_epoch, loss,1, device=self.device)
+        backdoor_acc, _ =evaluate(newmodel,test_adv_gen, steps_per_epoch, loss, 1,device=self.device)
         print('Final Test Accuracy: {:.4f} | Final Backdoor Accuracy: {:.4f}'.format(acc, backdoor_acc))
+        return newmodel
 
 

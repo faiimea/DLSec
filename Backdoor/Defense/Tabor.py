@@ -193,13 +193,14 @@ class Tabor():
                                        is_test=1)
         loss = torch.nn.CrossEntropyLoss()
         lr = 0.005
-        fit(self.model, train_gen, verbose=1, steps_per_epoch=int(train_size // BATCH_SIZE), learning_rate=lr,
+        newmodel = copy.deepcopy(self.model)
+        fit(newmodel, train_gen, verbose=1, steps_per_epoch=int(train_size // BATCH_SIZE), learning_rate=lr,
             loss=loss, device=self.device, change_lr_every=10)
         print("Evaluating model")
         number_images = len(test_Y)
         steps_per_epoch = int(number_images // BATCH_SIZE)
-        acc, _ = evaluate(self.model, test_clean_gen, steps_per_epoch, loss, 1, device=self.device)
-        backdoor_acc, _ = evaluate(self.model, test_adv_gen, steps_per_epoch, loss, 1, device=self.device)
+        acc, _ = evaluate(newmodel, test_clean_gen, steps_per_epoch, loss, 1, device=self.device)
+        backdoor_acc, _ = evaluate(newmodel, test_adv_gen, steps_per_epoch, loss, 1, device=self.device)
         print('Final Test Accuracy: {:.4f} | Final Backdoor Accuracy: {:.4f}'.format(acc, backdoor_acc))
-
+        return newmodel
 

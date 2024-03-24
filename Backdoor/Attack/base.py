@@ -21,7 +21,7 @@ batch_size:批大小
 optimizer:优化器，使用torch.optim下的优化器
 local_model_path:默认为None，或传入字符串路径加载已有模型，此时model失效
 '''
-project_data_path = "../data"
+project_data_path = "./data"
 
 
 def optimizer_picker(optimization, param, lr):

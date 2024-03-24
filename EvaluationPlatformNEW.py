@@ -75,10 +75,9 @@ def run_test_on_model(Model2BeEvaluated, allow_backdoor_defense, backdoor_method
     @param params: 原始参数，部分方法会使用其中对应部分的参数
     @return: 防御后的模型权重文件的路径，如果不执行防御则为None
     '''
-    # adversarial_rst = adversarial_test(Model2BeEvaluated,train_dataloader=test_dataloader, params=params)
+    adversarial_rst = adversarial_test(Model2BeEvaluated,train_dataloader=test_dataloader, params=params)
     isBackdoored, backdoor_rst, ReinforcedModel_dict_path = backdoor_detect_and_defense(allow_defense=allow_backdoor_defense, Model2BeEvaluated=Model2BeEvaluated, method=backdoor_method, train_dataloader=train_dataloader, params=params)
     datapoison_test_rst = datapoison_test(params=params)
-
     if run_datapoison_reinforcement:
         if ReinforcedModel_dict_path is not None:
             DatapoisonReinforceModel = copy.deepcopy(Model2BeEvaluated)
@@ -89,7 +88,7 @@ def run_test_on_model(Model2BeEvaluated, allow_backdoor_defense, backdoor_method
     else:
         datapoison_defense_rst = None
 
-    # process_result(params['tag'], adversarial_rst, backdoor_rst, datapoison_test_rst, datapoison_defense_rst)
+    process_result(params['tag'], adversarial_rst, backdoor_rst, datapoison_test_rst, datapoison_defense_rst)
     return ReinforcedModel_dict_path
 
 

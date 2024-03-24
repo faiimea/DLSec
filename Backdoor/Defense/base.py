@@ -37,10 +37,10 @@ def BackdoorDefense(dataloader, model, method='NeuralCleanse', triggerpath='defa
     if outlier is None:
         return [], [0,0], None, None
 
-    DF.mitigate()
+    newmodel=DF.mitigate()
     new_model_save_path = os.getcwd() + "/" + triggerpath+'/defense_rst.pth'
-    torch.save(DF.model.state_dict(), new_model_save_path)
-    return outlier, trigger, DF.model, new_model_save_path
+    torch.save(newmodel.state_dict(), new_model_save_path)
+    return outlier, trigger, newmodel, new_model_save_path
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ class Generator(nn.Module):
             self.k2, self.y = 4, self.y - 1
         self.linear1 = nn.Linear(label_num, 128 * self.x * self.y)
         self.bn1 = nn.BatchNorm1d(128 * self.x * self.y)
-        self.linear2 = nn.Linear(100, 128 * self.x * self.y)
+        self.linear2 = nn.Linear(1000, 128 * self.x * self.y)
         self.bn2 = nn.BatchNorm1d(128 * self.x * self.y)
         self.deconv1 = nn.Sequential(
             nn.ConvTranspose2d(256, 128, kernel_size=(4, 4), padding=1),

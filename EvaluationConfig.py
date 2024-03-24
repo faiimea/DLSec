@@ -2,16 +2,35 @@ import torchvision.models as models
 import torch
 
 '''********** Load your model here **********'''
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# resnet50
 # model = models.resnet50(pretrained=True)
+# model.load_state_dict(torch.load('./checkpoint/resnet50.pth', map_location=device))
+
+
 # model.load_state_dict(torch.load('path_to_pretrained_weights.pth'))
 # torchvision.models.ResNet(torchvision.models.resnet.BasicBlock, [2, 2, 2, 2])
-# model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_shufflenetv2_x0_5", pretrained=True)
-# model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet20", pretrained=True)
-model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
-# model.load_state_dict(torch.load('./Backdoor/LocalModels/pth'))
-model.load_state_dict(torch.load('./Backdoor/checkpoints/20231229-161017-BadnetCIFAR10forDI.pth'))
 
-model.to("cuda")
+# shufflenetv2_x0_5
+# model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_shufflenetv2_x0_5", pretrained=True)
+# model.load_state_dict(torch.load('./checkpoint/shufflenetv2_x0_5.pth', map_location=device))
+
+# resnet20
+# model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet20", pretrained=True)
+# model.load_state_dict(torch.load('./checkpoint/resnet20.pth', map_location=device))
+
+# resnet56
+# model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
+# model.load_state_dict(torch.load('./Backdoor/checkpoints/20231229-161017-BadnetCIFAR10forDI.pth', map_location=device))
+# model.load_state_dict(torch.load('./Backdoor/LocalModels/pth', map_location=device))
+# model.load_state_dict(torch.load('./checkpoint/resnet56.pth', map_location=device))
+# model.load_state_dict(torch.load('./Backdoor/checkpoints/20240314-203547-BlendCIFAR10.pth', map_location=device))
+
+# vgg16_bn	
+model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_vgg16_bn", pretrained=True)
+# model.load_state_dict(torch.load('./checSkpoint/vgg16_bn.pth', map_location=device))
+
+model.eval()
 FRIENDLYNOISE_config = {
     'friendly_epochs': 30,
     'mu': 1,
@@ -41,7 +60,7 @@ evaluation_params = {
     'use_dataset': 'CIFAR10',
     'batch_size': 64,
     'device': 'cuda',
-    'tag': "cifar10_shufflenetv2_x0_5",
+    'tag': "vgg16_bn",
     # 以下为部分方法会使用到的参数
     'generator_path': './Backdoor/Defense/DeepInspectResult/generator.pth',
     'load_generator': False,

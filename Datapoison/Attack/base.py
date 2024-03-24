@@ -32,8 +32,8 @@ poison_vruns:控制了生成毒药后，验证毒药次数
 生成毒药的优化器直接选了signAdam？
 '''
 
-path = r'C:\Users\Lenovo\Desktop\DLSec\data'  # 不太确定工作路径设置的哪里，绝对路径反正没错
-
+# path = r'C:\Users\Lenovo\Desktop\DLSec\data'  # 不太确定工作路径设置的哪里，绝对路径反正没错
+path = "./data"
 
 
 class DatapoisonAttack():

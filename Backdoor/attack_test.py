@@ -4,10 +4,11 @@ from Attack.BadNets import Badnets
 from Attack.WaNet import WaNet
 from Attack.blend import Blend
 # import pretrainedmodels
-model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
+# model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
 # model = pretrainedmodels.__dict__['resnet50'](num_classes=1000, pretrained='imagenet')
 # model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar100_resnet56", pretrained=True)
 # model=Net(1,10)
+model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_vgg16_bn", pretrained=True)
 
 '''
 model=models.resnet50(pretrained=False)
@@ -25,7 +26,7 @@ if __name__ == "__main__":
     attack_mode="Badnets"
     if attack_mode=="Badnets":
         Badnets_params = {
-            'tag': "BadnetCIFAR10forDI",
+            'tag': "BadnetCIFAR10forVGG16",
             'device': 'cuda',
             'model': model,
             'dataset': torchvision.datasets.CIFAR10,
@@ -36,7 +37,7 @@ if __name__ == "__main__":
             'batch_size': 128,
             'optimizer': 'sgd',
             'criterion': torch.nn.CrossEntropyLoss(),
-            'local_state_path':"20231229-161017-BadnetCIFAR10forDI.pth",  # LocalModels下相对路径
+            'local_state_path':None,  # LocalModels下相对路径
             'trigger_path': './Attack/triggers/trigger_10.png',
             'trigger_size': (5, 5)
         }

@@ -10,6 +10,8 @@ import scipy.stats as stats
 import copy
 import os
 from Backdoor.Defense.gen import Generator
+from tqdm import tqdm
+
 '''
 deepinspect检测的关键在于训练一个generator来生成后门，
 这里由于生成后门的网络和数据集shape有关，下面写了针对cifar10和mnist的结构，
@@ -82,7 +84,7 @@ def test_gen_backdoor(gen, model, source_loader, target_label, device,num_class)
             label = torch.ones_like(ori_label) * target_label
             one_hot_label = one_hot(label,class_count=num_class).to(device)
             img, label = img.to(device), label.to(device)
-            noise = torch.randn((img.shape[0], 100)).to(device)
+            noise = torch.randn((img.shape[0], 1000)).to(device)
             G_out = gen(one_hot_label, noise)
             D_out = model(img + G_out)
             pred = D_out.data.max(1)[1]
@@ -109,7 +111,8 @@ def test_clean(model, source_loader, device):
 
 
 def detect_triger(gen, device, alpha=0.05,num_class=10):
-    noise = torch.randn((100, 100)).to(device)
+    gen.eval()
+    noise = torch.randn((100, 1000)).to(device)
     trigger_perturbations = []
     for target_class in range(num_class):
         label = torch.ones(100, dtype=torch.int64) * target_class
@@ -129,52 +132,76 @@ def detect_triger(gen, device, alpha=0.05,num_class=10):
     mad = 1.4826 * np.median(np.abs([item[1] for item in left_subgroup] - median_1), axis=0)
     result= stats.norm.cdf((median-trigger_perturbations-median_1)/mad)
 
-    other_result=result*relative_size/trigger_perturbations
+    size=relative_size/np.array(trigger_perturbations)
     # 计算假设测试的显著性水平（α）alpha
 
     # 根据显著性水平计算截断阈值（c）
     
-
+    print(np.max(result),np.max(size))
     # 根据 DMAD 检测标准，判断是否存在异常值
-    outliers = np.where(result>1-alpha)[0]
-    if len(outliers) > 0 and other_result[outliers]>0.8:
+    outliers = np.where(np.logical_and(result > 1-alpha, size > 0.75))[0]
+    if len(outliers) > 0 :
         print("存在异常值！", outliers)
-        return outliers,[np.max(result),np.max(relative_size/np.array(trigger_perturbations))]
+        return outliers,[np.max(result),np.max(size)]
     else:
         print("未检测到异常值。")
-        return None,[np.max(result),np.max(relative_size/np.array(trigger_perturbations))]
+        return None,[np.max(result),np.max(size)]
 
 
 def train_gen(gen, model, epoch, dataloader, device, threshold=20, generator_path=None,num_class=10):
     model.eval()
+    all_label = []
+    all_img = {}
     patience = 30
     noimpovement = 0
     bestloss = float("inf")
-
+    gen.train()
+    for img, label in dataloader.dataset:
+        if label not in all_label:
+            all_img[label] = img
+            all_label.append(label)
+        if len(all_label) == num_class:
+            all_label = torch.tensor(all_label).to(device)
+            all_img = list(all_img.values())  # 获取字典中的张量值列表
+            all_img = torch.stack(all_img).to(device)
+            break
     for _ in range(1, epoch + 1):
-        gen.train()
-        optimizer = torch.optim.Adam(gen.parameters(), lr=1e-2)
-        lamda1 = 0.6
+       
+        optimizer = torch.optim.Adam(gen.parameters(), lr=2e-2)
+        lamda1 = 0.1
+        lamda2 = 0.1
         NLLLoss = nn.NLLLoss(reduction='sum')
         logsoftmax = nn.LogSoftmax(dim=1)
+        MSELoss = nn.MSELoss(reduction='sum')
         Loss_sum = 0
         L_trigger_sum = 0
         L_pert_sum = 0
+        L_Gan_sum = 0
         count_sum = 0
-        for i, (img, ori_label) in enumerate(dataloader):
+        bar=tqdm(dataloader)
+        for i, (img, ori_label) in enumerate(bar):
             label = torch.randint(low=0, high=num_class, size=(img.shape[0],))
             one_hot_label = one_hot(label,class_count=num_class).to(device)
             img, label = img.to(device), label.to(device)
-            noise = torch.randn((img.shape[0], 100)).to(device)
+            noise = torch.randn((img.shape[0], 1000)).to(device)
             G_out = gen(one_hot_label, noise)
             D_out = model(img + G_out)
-
+            sorted_img = torch.empty_like(img)
+            # 遍历 label 中的每个值
+            for i, target in enumerate(label):
+                # 在 ori_label 中找到等于 target 的位置
+                indices = torch.nonzero(all_label == target).squeeze().item()
+                sorted_img[i] = all_img[indices]
+            ori_out = model(sorted_img)
             D_out = logsoftmax(D_out)
             L_trigger = NLLLoss(D_out, label)
             G_out_norm = torch.sum(torch.abs(G_out)) / img.shape[0] - threshold
             L_pert = torch.max(torch.zeros_like(G_out_norm), G_out_norm)
-
-            Loss = L_trigger + lamda1 * L_pert
+            accuracy = torch.softmax(D_out, dim=1)
+            ori_accuary = torch.softmax(ori_out, dim=1)
+            L_Gan = MSELoss(accuracy, ori_accuary)
+            Loss = L_trigger + lamda1 * L_pert + lamda2 * L_Gan
+            # Loss = L_trigger + lamda1 * L_pert
             optimizer.zero_grad()
             if Loss < bestloss:
                 bestloss = Loss
@@ -185,21 +212,26 @@ def train_gen(gen, model, epoch, dataloader, device, threshold=20, generator_pat
                 patience *= 2
                 for param_group in optimizer.param_groups:
                     param_group['lr'] /= 10
+            lamda1=0.1+(_+noimpovement)/(epoch+noimpovement)*0.1
+            lamda2=0.1+(_+noimpovement)/(epoch+noimpovement)*0.1
             Loss.backward()
             optimizer.step()
             Loss_sum += Loss.item()
             L_trigger_sum += L_trigger.item()
             L_pert_sum += L_pert.item()
             count_sum += 1
+            bar.set_description(f'Epoch {_}/{epoch} Loss: {Loss.item():.4f}')
+
         # print(f'Epoch-{_}: Loss={round(Loss_sum / count_sum, 3)}, L_trigger={round(L_trigger_sum / count_sum, 3)}, L_pert={round(L_pert_sum / count_sum, 3)}, L_Gan={round(L_Gan_sum / count_sum, 3)}')
         print(f'Epoch-{_}: Loss={round(Loss_sum / count_sum, 3)}, L_trigger={round(L_trigger_sum / count_sum, 3)}, L_pert={round(L_pert_sum / count_sum, 3)}')
 
 
 def deepinspect(model, train_dataloader, tag, generator_path=None, load_generator=False):
-    clean_budget = 2000
+    
     patch_rate = 0.15
     
     all_dataset = train_dataloader.dataset
+    clean_budget = int(len(all_dataset)*0.8)
     indices = np.random.choice(len(all_dataset), clean_budget, replace=False)
     dataset = Subset(all_dataset, indices)
     dataloader = DataLoader(dataset, batch_size=128, shuffle=True)
@@ -213,7 +245,7 @@ def deepinspect(model, train_dataloader, tag, generator_path=None, load_generato
     unique_labels = torch.unique(torch.tensor(labels))
     num_classes = len(unique_labels)
     device = "cuda"
-    epoch = 20
+    epoch = 5
 
     model.to(device)
     gen = Generator(channels=all_dataset[0][0].shape[0], height=all_dataset[0][0].shape[1], width=all_dataset[0][0].shape[2]).to(device)
@@ -236,9 +268,9 @@ def deepinspect(model, train_dataloader, tag, generator_path=None, load_generato
     后面是防御部分
     '''
     newmodel = copy.deepcopy(model)
-    noise = torch.randn((int(patch_rate * clean_budget), 100)).to(device)
+    noise = torch.randn((int(patch_rate * clean_budget), 1000)).to(device)
     for target_class in outliers:
-        testdataset = Subset(all_dataset, indices=[i for i in range(len(all_dataset)) if i not in indices and np.random.random() < 0.1])
+        testdataset = Subset(all_dataset, indices=[i for i in range(len(all_dataset)) if i not in indices])
         testdataloader = DataLoader(testdataset, batch_size=128, shuffle=True)
         bdacc1 = test_gen_backdoor(gen, newmodel, testdataloader, target_class, device,num_class=num_classes)
         cda1 = test_clean(newmodel, testdataloader, device)
