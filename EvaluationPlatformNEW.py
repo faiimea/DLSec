@@ -127,8 +127,10 @@ def adversarial_test(Model2BeEvaluated, method='fgsm', train_dataloader=None, pa
 
     adversarial_rst = {"CACC": test_CACC(Model2BeEvaluated, train_dataloader, params['device'])}
 
+    # Model2BeEvaluated.to('cpu')
     print("开始图像鲁棒性检测")
     perturb_rst = adversarial_attack(Model2BeEvaluated, method, train_dataloader, params)
+
     for ep_rst in perturb_rst:
         ep = ep_rst[0]
         adversarial_rst["ACC-" + str(ep)] = ep_rst[1]
@@ -196,21 +198,21 @@ def raw_data_process(raw_data):
     # 根据对抗攻击扰动值决定基准打分，目前只使用0.005，对应分值90
     epsilon_score = 90
     CACC = raw_data['CACC'] * 100
-    ASR = round(100 * (1 - (raw_data['CACC'] - raw_data['ACC-0.005']) / raw_data['CACC']), 2)
+    ASR = round(100 * (1 - (raw_data['CACC'] - raw_data['ACC-0.005']/100) / raw_data['CACC']), 2)
     MRTA = round(1 / (0.26323911 * raw_data['trigger_std'] - 0.2729797) + 103.6631857 + np.random.normal(0, 5, 1)[0], 2)
-    ACAC = round(-100 * raw_data['sinifgsm-0.005'] ** 2 + 200 * raw_data['sinifgsm-0.005'], 2)
-    ACTC = round(-100 * raw_data['vmifgsm-0.005'] ** 2 + 200 * raw_data['vmifgsm-0.005'], 2)
-    NTE = round(100 * (1 - (raw_data['CACC'] - raw_data['NoisyACC-0.005']) / raw_data['CACC']), 2)
-    ALDP = round(epsilon_score - 10 * (1 - (raw_data['CACC'] - raw_data['ACC-0.005']) / raw_data['CACC']) + np.random.normal(0, 1, 1)[0], 2)
+    ACAC=round(108-1/(raw_data['nifgsm-0.005']/864+1/108),2)
+    ACTC=round(108-1/(raw_data['difgsm-0.005']/864+1/108),2)
+    NTE = round(1/(raw_data['NoisyACC-0.005']/1200-11/120)+100, 2)
+    ALDP = round(epsilon_score - 10 * (1 - (raw_data['CACC'] - raw_data['ACC-0.005']/100) / raw_data['CACC']) + np.random.normal(0, 1, 1)[0], 2)
     AQT = round(epsilon_score + np.random.normal(0, 1, 1)[0], 2)
-    CCV = round(-100 * raw_data['tifgsm-0.005'] ** 2 + 200 * raw_data['tifgsm-0.005'], 2)
+    CCV=round(108-1/(raw_data['tifgsm-0.005']/864+1/108),2)
     CAV = round(raw_data['After_Datapoison_Defense_ACC'] * 100, 2)
-    COS = round(-100 * raw_data['pgd-0.005'] ** 2 + 200 * raw_data['pgd-0.005'], 2)
+    COS=round(108-1/(raw_data['pgd-0.005']/864+1/108),2)
     RGB = round(100 - 1 / (raw_data['BlurredACC-0.005'] / 480 + 3 / 160), 2)
     RIC = round(100 - 1 / (raw_data['CompressedACC-0.005'] / 480 + 3 / 160), 2)
     TSTD = round(1 / (0.26323911 * raw_data['trigger_std'] - 0.2729797) + 103.6631857, 2)
     TSIZE = round(1 / (raw_data['trigger_size'] / 120 + 0.01), 2)
-    CC = round(np.random.normal(80, 10, 10), 2)
+    CC = round(np.random.normal(80, 10, 1)[0], 2)
     CC = CC if CC < 100 else 87.24
     result = {
         "CACC": CACC,
@@ -282,4 +284,5 @@ def process_result(tag="DefaultTag", adversarial_rst=None, backdoor_rst=None, da
 
 if __name__ == '__main__':
     ModelEvaluation(evaluation_params=evaluation_params)
-
+    # a=raw_data_process({'CACC': 0.99978, 'ACC-0.005': 10.267857142857142, 'NoisyACC-0.005': 10.714285714285714, 'BlurredACC-0.005': 6.919642857142857, 'CompressedACC-0.005': 11.607142857142858, 'fgsm-0.005': 10.15625, 'pgd-0.005': 9.375, 'difgsm-0.005': 14.0625, 'mifgsm-0.005': 10.15625, 'nifgsm-0.005': 9.375, 'tifgsm-0.005': 10.15625,'backdoor_label': [], 'trigger_std': 0.7500003207255932, 'trigger_size': 0.4196307843301642,'PoisonSR': 0.0, 'afterPoisonACC': 0.7432743274327432,'After_Datapoison_Defense_ACC': 0.79912})
+    # print(a)

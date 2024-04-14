@@ -11,7 +11,7 @@ model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pre
 # model.load_state_dict(torch.load('./Backdoor/LocalModels/pth'))
 # model.load_state_dict(torch.load('./Backdoor/checkpoints/20231229-161017-BadnetCIFAR10forDI.pth'))
 
-model.to("cuda")
+
 FRIENDLYNOISE_config = {
     'friendly_epochs':3, #30,
     'mu': 1,
@@ -39,7 +39,7 @@ evaluation_params = {
     'datapoison_reinforce_method': 'FriendlyNoise',
     'run_datapoison_reinforcement': True,
     'use_dataset': 'CIFAR10',
-    'batch_size': 64,#64
+    'batch_size': 16,#64
     'device': 'cuda',
     'tag': "cifar10_shufflenetv2_x0_5",
     # 以下为部分方法会使用到的参数

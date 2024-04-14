@@ -134,7 +134,6 @@ def test_acc(model, testloader, test_images, n_image=448, save_test_images=False
         images, labels = data
 
         if total < n_image:
-            test_images[i]=test_images[i].to('cuda')
             outputs = model(test_images[i])
             _, predicted = torch.max(outputs.data, 1)
             # The torch.max return 2 value, which respectively represents the max value and the index
@@ -147,7 +146,7 @@ def test_acc(model, testloader, test_images, n_image=448, save_test_images=False
 
                 # Here change batchsize !!!
                 p_labels.append(predicted)
-                if predicted[total % batch_size] == j:
+                if predicted[total % len(labels)] == j:
                     correct += 1
                 total += 1
             i += 1
@@ -180,7 +179,8 @@ def adversarial_attack(model=None, method="fgsm", train_dataloader=None, params=
 
     # print(model)
     use_cuda = True
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = params['device']
+    model.to(device)
 
     if train_dataloader is None:
         testloader = dataset_preprocess()
@@ -192,15 +192,12 @@ def adversarial_attack(model=None, method="fgsm", train_dataloader=None, params=
     with torch.no_grad():
         for data in testloader:
             images, labels = data
-            org_img.append(images)
-            org_labels.append(labels)
+            org_img.append(images.to(device))
+            org_labels.append(labels.to(device))
+
 
     print('Noise start')
-    noisy_images = [add_gaussian_noise(img) for img in org_img]
-    print('Blurred start')
-    blurred_images = [apply_gaussian_blur(img) for img in org_img]
-    print('Compressed start')
-    compressed_images = [compress_image(img) for img in org_img]
+    noisy_images = [add_gaussian_noise(img).to(device) for img in org_img]
 
     # Small test
     st = 100
@@ -213,7 +210,7 @@ def adversarial_attack(model=None, method="fgsm", train_dataloader=None, params=
 
     data_scale = mt
 
-    test_accuracy, resnet56_labels, orig = test_acc(model, testloader, org_img, data_scale, True)
+    # test_accuracy, resnet56_labels, orig = test_acc(model, testloader, org_img, data_scale, True)
 
     # epsilons=[0.005,0.01,0.02,0.05,0.1]
     epsilons = [0.005]
@@ -253,27 +250,44 @@ def adversarial_attack(model=None, method="fgsm", train_dataloader=None, params=
         for i in range(len(org_img)):
             attack_img.append(attack(org_img[i], org_labels[i]))
         elapsed_time = time.time() - start_time
-
+        atk_test_accuracy, atk_labels, a_images = test_acc(model, testloader, attack_img, mt, True)
+        del attack_img
         progress_bar.update(1)
         # Process noisy_images
+
         attack_img_noisy = []
         for i in range(len(noisy_images)):
             attack_img_noisy.append(attack(noisy_images[i], org_labels[i]))
+        atk_test_accuracy_noisy, _, _ = test_acc(model, testloader, attack_img_noisy, mt, True)
+        del attack_img_noisy
+        del noisy_images
         progress_bar.update(1)
+
+        print('Blurred start')
+        blurred_images = [apply_gaussian_blur(img).to(device) for img in org_img]
+
         # Process blurred_images
         attack_img_blurred = []
+
         for i in range(len(blurred_images)):
             attack_img_blurred.append(attack(blurred_images[i], org_labels[i]))
+        atk_test_accuracy_blurred, _, _ = test_acc(model, testloader, attack_img_blurred, mt, True)
+
+        del attack_img_blurred
+        del blurred_images
         progress_bar.update(1)
+
+        print('Compressed start')
+        compressed_images = [compress_image(img).to(device) for img in org_img]
         # Process compressed_images
         attack_img_compressed = []
         for i in range(len(compressed_images)):
             attack_img_compressed.append(attack(compressed_images[i], org_labels[i]))
         progress_bar.update(1)
         print(elapsed_time)
-        atk_test_accuracy, atk_labels, a_images = test_acc(model, testloader, attack_img, mt, True)
-        atk_test_accuracy_noisy, _, _ = test_acc(model, testloader, attack_img_noisy, mt, True)
-        atk_test_accuracy_blurred, _, _ = test_acc(model, testloader, attack_img_blurred, mt, True)
+
+
+
         atk_test_accuracy_compressed, _, _ = test_acc(model, testloader, attack_img_compressed, mt, True)
         table_data.append([eps, atk_test_accuracy, atk_test_accuracy_noisy, atk_test_accuracy_blurred,
                            atk_test_accuracy_compressed, elapsed_time])
@@ -301,7 +315,7 @@ def adversarial_mutiple_attack(model=None, train_dataloader=None, params=None):
 
     # print(model)
     use_cuda = True
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = params['device']
     print(device)
     model.to(device)
     if train_dataloader is None:
@@ -336,7 +350,8 @@ def adversarial_mutiple_attack(model=None, train_dataloader=None, params=None):
     epsilons = [0.005]
     table_data = []
     accuracies = []
-    attack_methods = ['fgsm', 'pgd', 'difgsm', 'mifgsm', 'nifgsm', 'sinifgsm', 'tifgsm', 'vmifgsm', 'vnifgsm']
+    # attack_methods = ['fgsm', 'pgd', 'difgsm', 'mifgsm', 'nifgsm', 'sinifgsm', 'tifgsm', 'vmifgsm', 'vnifgsm']
+    attack_methods = ['fgsm', 'pgd', 'difgsm', 'mifgsm', 'nifgsm',  'tifgsm']
     progress_bar = tqdm(total=len(attack_methods) * len(epsilons), desc="Generating Adversarial Examples")
     for eps in epsilons:
         for method in attack_methods:
@@ -350,12 +365,15 @@ def adversarial_mutiple_attack(model=None, train_dataloader=None, params=None):
                 attack = MIFGSM(model, eps=eps, device=params['device'])
             elif method == 'nifgsm':
                 attack = NIFGSM(model, eps=eps, device=params['device'])
+            # 慢
             elif method == 'sinifgsm':
                 attack = SINIFGSM(model, eps=eps, device=params['device'])
             elif method == 'tifgsm':
                 attack = TIFGSM(model, eps=eps, device=params['device'])
+            # 慢
             elif method == 'vmifgsm':
                 attack = VMIFGSM(model, eps=eps, device=params['device'])
+            # 慢
             elif method == 'vnifgsm':
                 attack = VNIFGSM(model, eps=eps, device=params['device'])
 
