@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>深度学习模型安全性检测</title>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='index.css') }}">
+  <!-- <link rel="stylesheet" type="text/css" href="../static/index.css"> -->
+  <script type="text/javascript" src="https://registry.npmmirror.com/echarts/5.5.0/files/dist/echarts.min.js"></script>
+  <script type="text/javascript" src="{{ url_for('static', filename='index.js') }}"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.4.1/jspdf.debug.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.3/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>
+  <!-- <script type="text/javascript" src="../static/index.js"></script> -->
+</head>
+<body>
+  <div class="title">
+    <img src="{{ url_for('static', filename='logo.png') }}" id="logo" style="width: 50px;height: 50px;" alt="logo">
+    <p id="logo_name">深度学习模型安全性检测</p>
+  </div>
+  <div class="top-container">
+    <div class="top-left">
+      <li class="top-left-li" style="list-style-type:none">  
+        <button id="tlb1" onclick="openFileManager()">选择模型</button>
+        <input type="file" id="file-input" style="display: none;">
+        <span id="model">unselected</span>
+      </li>
+      <li class="top-left-li" style="list-style-type:none">
+        <label for="device">device</label>
+        <select id="device">
+          <!-- <option value="" selected disabled hidden>参数指定</option> -->
+          <option>CPU</option>
+          <option selected>CUDA</option>     
+        </select>
+      </li>
+      <li class="top-left-li" style="list-style-type:none">
+        <label for="batch_size">batch_size</label>
+        <input type="range" id="batch_size" name="score" min="1" max="100" value="50">
+        <span id="batch_size_value">50</span>
+      </li>
+      <li class="top-left-li" style="list-style-type:none">
+        <label for="bd_method">backdoor_method</label>
+        <select id="bd_method">
+          <option selected >NeuralCleanse</option>
+          <option>DeepInspect</option>
+          <option>NeuralCleanse</option>     
+        </select>
+      </li>
+      <li class="top-left-li" style="list-style-type:none">
+        <label for="epoch">poison_epoch</label>
+        <input type="range" id="epoch" name="epoch" min="1" max="100" value="30">
+        <span id="epoch_value">30</span>
+      </li>
+      <li class="top-left-li" style="list-style-type:none">
+        <label for="bsize">poison_batch_size</label>
+        <select id="bsize">
+          <!-- <option value="" selected disabled hidden>参数指定</option> -->
+          <option>128</option>
+          <option>256</option>     
+          <option selected>512</option>
+        </select>
+      </li>
+      <li class="top-left-li" style="list-style-type:none">
+        <label for="pmethod">poison_method</label>
+        <select id="pmethod">
+          <!-- <option value="" selected disabled hidden>参数指定</option> -->
+          <option selected>poison-frogs</option>
+          <option>gradient-matching</option>     
+        </select>
+      </li>
+      <li class="top-left-li" style="list-style-type:none">
+        <label for="dataset">dataset</label>
+        <select id="dataset">
+          <!-- <option value="" selected disabled hidden>参数指定</option> -->
+          <option selected>Mnist</option>
+          <option>CIFAR10</option>     
+          <option>CIFAR100</option>
+        </select>
+      </li>
+      <li id="start"style="list-style-type:none">
+        <button id="tlb2" onclick="start_detect()">开始检测</button>
+      </li>
+    </div>
+    <div class="top-center">
+      <div id="ratio-container">
+      </div>
+    </div>
+    <div class="top-right">
+      <!-- <span class="sub-title">评测结果</span> -->
+      <table id="result_table">
+        <tr>
+          <th>指标</th>
+          <th>结果</th>
+          <th>指标</th>
+          <th>结果</th>
+        </tr>
+        <tr>
+          <td>CACC</td>
+          <td class="value" id="CACC">--</td>
+          <td>ASR</td>
+          <td class="value" id="ASR">--</td>
+        </tr>
+        <tr>
+          <td>MR<sub>TA</sub></td>
+          <td class="value" id="MRTA">--</td>
+          <td>ACAC</td>
+          <td class="value" id="ACAC">--</td>
+        </tr>
+        <tr>
+          <td>ACTC</td>
+          <td class="value" id="ACTC">--</td>
+          <td>NTE</td>
+          <td class="value" id="NTE">--</td>
+        </tr>
+        <tr>
+          <td>ALD<sub>p</sub></td>
+          <td class="value" id="ALD">--</td>
+          <td>AQT</td>
+          <td class="value" id="AQT">--</td>
+        </tr>
+        <tr>
+          <td>CCV</td>
+          <td class="value" id="CCV">--</td>
+          <td>CAV</td>
+          <td class="value" id="CAV">--</td>
+        </tr>
+        <tr>
+          <td>COS</td>
+          <td class="value" id="COS">--</td>
+          <td>RGB</td>
+          <td class="value" id="RGB">--</td>
+        </tr>
+        <tr>
+          <td>RIC</td>
+          <td class="value" id="RIC">--</td>
+          <td>T<sub>std</sub></td>
+          <td class="value" id="TSTD">--</td>
+        </tr>
+        <tr>
+          <td>T<sub>size</sub></td>
+          <td class="value" id="TSIZE">--</td>
+          <td>CC</td>
+          <td class="value" id="CC">--</td>
+        </tr>
+      </table>
+    <button id="report" onclick="report()">生成模型评测报告</button>
+  </div>
+  </div>
+  <div class="bottom-container">
+    <div class="box">
+      <img class="picture" id="pic4" src="{{ url_for('static', filename='4.png') }}" alt="Image 1">
+      <p class="process">对抗样本攻击测试</p>
+    </div>
+    <div class="suploading" id="suploading1">
+    <div class="loading" id="loading1">   
+      <span class="girl"></span>
+      <div class="boys">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+    </div>
+    <div class="box">
+      <img class="picture" src="{{ url_for('static', filename='2.png') }}" alt="Image 2">
+      <p class="process">后门检测与防御</p>
+    </div>
+    <div class="suploading" id="suploading2">
+    <div class="loading" id="loading2">
+      <span class="girl"></span>
+      <div class="boys">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      </div>
+    </div>
+    <div class="box">
+      <img class="picture" src="{{ url_for('static', filename='1.png') }}" alt="Image 3">
+      <p class="process">数据投毒检测</p>
+    </div>
+    <div class="suploading" id="suploading3">
+    <div class="loading" id="loading3">
+      <span class="girl"></span>
+      <div class="boys">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+    </div>
+    <div class="box" id="box4">
+      <img class="picture" src="{{ url_for('static', filename='3.png') }}" alt="Image 4">
+      <p class="process">指标计算</p>
+    </div>
+  </div>
+<script type="text/javascript">
+  ratio();
+  silder("batch_size", "batch_size_value");
+  silder("epoch", "epoch_value");
+  result([]);
+</script>
+</body>
+</html>
