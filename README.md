@@ -4,7 +4,7 @@
 
 ## 使用方式
 
-在` EvaluationConfig.py`文件内加载模型并调整参数，随后运行` EvaluationPlatformNEW.py `执行测试。
+在`EvaluationConfig.py`文件内加载模型并调整参数，随后运行`EvaluationPlatformNEW.py`执行测试。
 
 ## 结果说明
 
