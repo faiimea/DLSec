@@ -20,14 +20,14 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # model.load_state_dict(torch.load('./checkpoint/resnet20.pth', map_location=device))
 
 # resnet56
-# model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
+model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_resnet56", pretrained=True)
 # model.load_state_dict(torch.load('./Backdoor/checkpoints/20231229-161017-BadnetCIFAR10forDI.pth', map_location=device))
 # model.load_state_dict(torch.load('./Backdoor/LocalModels/pth', map_location=device))
 # model.load_state_dict(torch.load('./checkpoint/resnet56.pth', map_location=device))
 # model.load_state_dict(torch.load('./Backdoor/checkpoints/20240314-203547-BlendCIFAR10.pth', map_location=device))
 
 # vgg16_bn	
-model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_vgg16_bn", pretrained=True)
+# model = torch.hub.load("chenyaofo/pytorch-cifar-models", "cifar10_vgg16_bn", pretrained=True)
 # model.load_state_dict(torch.load('./checSkpoint/vgg16_bn.pth', map_location=device))
 
 model.eval()

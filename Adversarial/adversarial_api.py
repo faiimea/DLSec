@@ -156,6 +156,7 @@ def adversarial_attack(model=None,method="fgsm", train_dataloader=None, params=N
     use_cuda = True
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+
     if train_dataloader is None:
         testloader=dataset_preprocess()
     else:
