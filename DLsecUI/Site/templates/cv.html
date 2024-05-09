@@ -1,0 +1,74 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="{% static 'js/index.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@3.0.7/marked.min.js"></script>
+</head>
+
+
+<body onload="loadMarkdownFile()"> 
+    <header>
+        
+        <a href="#" class="logo"><i class="fas-fa-untensiles"></i>深度学习模型安全评估平台</a>
+        
+        <nav class="navbar">
+                <a href="/index">首页</a></li>
+                <a href="/cv" class="active">图像模型</a></li>
+                <a href="#nlp">语言模型</a></li>
+                <a href="#audio">语音模型</a></li>
+                <a href="#contact">联系我们</a></li>
+                <a href="https://github.com/faiimea/DLSec">项目地址</a></li>
+        </nav>
+
+    </header>
+    <aside class="sidebar">
+        <h3>首页</h3>
+        <ul>
+            <li><a href="#upload"  class="active">上传模型</a></li>
+            <li><a href="#introduction" >对抗样本</a></li>
+            <li><a href="#features" > 后门攻防</a></li>
+            <li><a href="#examples" >数据投毒</a></li>
+            <li><a href="#point" >综合测评</a></li>
+            <li><a href="#team" >报告导出</a></li>
+
+        </ul>
+    </aside>
+    <!-- introduction section starts -->
+    <section class="upload" id="upload">
+        <h1 class="section-title">上传模型</h1>
+        <div class="upload-container">
+            <div class="upload-box">
+                <form action="/upload" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="file" name="model" id="model" accept=".h5,.hdf5,.hdf
+                    <button type="submit">上传</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <section class="introduction" id="introduction">
+        <h1 class="section-title">对抗样本</h1>
+ 
+        <h2 class="setting-parameter">超参数设定</h2>
+        
+    </section>
+    <section class="features" id="features"></section>
+    <section class="examples" id="examples"></section>
+    <section class="point" id="point"></section>
+    <section class="team" id="team"></section>
+
+
+    <!-- <footer>
+        <p>&copy; 2020 All rights reserved</p>
+    </footer> -->
+</html>

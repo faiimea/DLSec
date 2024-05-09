@@ -1,0 +1,75 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="{% static 'js/index.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@3.0.7/marked.min.js"></script>
+</head>
+
+<script>
+  
+    const markdownUrl = "{% static 'md/设计文档.md' %}";
+
+    function loadMarkdownFile() {
+        fetch(markdownUrl)
+            .then(response => response.text())
+            .then(markdown => {
+                const html = marked(markdown);
+                document.getElementById('markdown-content').innerHTML = html;
+            });
+    }
+   
+</script>
+
+<body onload="loadMarkdownFile()"> 
+    <header>
+        
+        <a href="#" class="logo"><i class="fas-fa-untensiles"></i>深度学习模型安全评估平台</a>
+        
+        <nav class="navbar">
+                <a href="/index" class="active">首页</a></li>
+                <a href="/cv">图像模型</a></li>
+                <a href="#nlp">语言模型</a></li>
+                <a href="#audio">语音模型</a></li>
+                <a href="#contact">联系我们</a></li>
+                <a href="https://github.com/faiimea/DLSec">项目地址</a></li>
+        </nav>
+
+    </header>
+    <aside class="sidebar">
+        <h3>首页</h3>
+        <ul>
+            <li><a href="#introduction"  class="active">项目介绍</a></li>
+            <li><a href="#features" > 使用说明</a></li>
+            <li><a href="#examples" >测试样例</a></li>
+            <li><a href="#point" >创新点</a></li>
+            <li><a href="#team" >团队介绍</a></li>
+
+        </ul>
+    </aside>
+    <!-- introduction section starts -->
+
+    <section class="introduction" id="introduction">
+        <h1 class="section-title">项目介绍</h1>
+        <div class="container">
+            <div id="markdown-content"></div>
+        </div>
+    </section>
+    <section class="features" id="features"></section>
+    <section class="examples" id="examples"></section>
+    <section class="point" id="point"></section>
+    <section class="team" id="team"></section>
+
+
+    <!-- <footer>
+        <p>&copy; 2020 All rights reserved</p>
+    </footer> -->
+</html>

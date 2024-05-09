@@ -1,0 +1,175 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC&display=swap');
+
+:root{
+    --blue:#2D54AF;
+    --light-blue:#84a3f0;
+    --purple:#A855AF;
+    --red:#F06096;
+    --pink:#FF8874;
+    --orange:#FFBF5E;
+    --yellow:#FFD574;
+    --light-color:#666;
+    --dark-color:#333;
+    --white-color:#fff;
+    --box-shadow:0 .5rem 1.5rem rgba(0,0,0,.1);
+}
+
+*{
+    font-family:'Noto Serif SC', serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    text-decoration: none;
+    text-transform: capitalize;
+    transition:all .2s linear;
+}
+
+html{
+    font-size:100%;
+    overflow-x:hidden ;
+    scroll-padding-top:5.5rem;
+    scroll-behavior: smooth;
+}
+
+header{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    background:#fff;
+    padding: 1rem 7%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--box-shadow);
+}
+
+header .navbar a{
+    font-size:2 rem;
+    border-radius: .5rem;
+    padding: .3rem 1rem;
+    color:var(--light-color);
+    margin: 1rem 1rem;
+}
+
+header .logo{
+    font-size:2rem;
+    color:var(--blue);
+    font-weight: bold;
+}
+
+header .navbar a .active{
+    background:var(--light-blue);
+    color:var(--white-color);
+}
+header .navbar a:hover{
+    background:var(--blue);
+    color:var(--white-color);
+}
+
+aside {
+    position: fixed; /* 使侧边栏固定在页面上 */
+    z-index:-1;
+    box-shadow:.5rem 0 1.5rem rgba(0,0,0,.1);
+
+    left: 0; /* 使侧边栏靠左 */
+    top: 1rem; /* 使侧边栏靠顶部 */
+    height: 100%; /* 使侧边栏高度为 100% */
+    width: 10rem; /* 设置侧边栏宽度 */
+    background-color: var(--white-color); /* 设置侧边栏背景颜色 */
+    padding: 1rem; /* 设置侧边栏内边距 */
+    color:#666;
+    
+}
+
+aside ul {
+    list-style-type: none; /* 移除列表项目符号 */
+    padding: 5rem 0; 
+    margin:0rem 0rem;
+
+}
+aside ul li a{
+    display:block;
+    margin:0rem 0rem;
+    padding:1rem 0rem;
+    text-align: center;
+    color:#666
+}
+
+aside ul li a:hover{
+    background:var(--blue);
+    color:var(--white-color);
+    border-radius: 0.5rem;
+}
+
+aside ul li .active{
+    background:var(--light-blue);
+    color:var(--white-color);
+    border-radius: 0.5rem;
+}
+body{
+    margin-left:10rem;
+    margin-top: 6rem;
+}
+
+section{
+    z-index:-1;
+    padding: 1rem 5%;
+    position:relative;
+}
+
+.section-title{
+    font-size:2rem;
+    color:var(--dark-color);
+    margin-bottom:2rem;
+}
+
+
+@media (max-width:1360px){
+    html{
+        font-size:85%;
+        overflow-x:hidden ;
+        scroll-padding-top:5.5rem;
+        scroll-behavior: smooth;
+    }
+    header{
+        padding: 1rem 2rem;
+    }
+}
+
+@media (max-width:1024px){
+    html{
+        font-size:70%;
+        overflow-x:hidden ;
+        scroll-padding-top:5.5rem;
+        scroll-behavior: smooth;
+    }
+    header .navbar a{
+        padding: 1rem .5rem;
+    }
+}
+
+@media (max-width:800px){
+    header .logo {
+        display:inline-block;
+    }
+
+    header .navbar{
+        position:absolute;
+        top:100%; left:0; right:0;
+        background:var(--white-color);
+        padding: 1rem;
+        border-top:.1rem solid rgba(0,0,0,.2);
+        border-bottom: .1rem solid rgba(0,0,0,.2);
+    }
+
+    header .navbar a{
+        display:block;
+        padding :1.5rem;
+        margin:1rem;
+        font-size:1.5rem;
+        background:#eee;
+
+    }
+
+}
