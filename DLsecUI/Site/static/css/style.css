@@ -42,6 +42,7 @@ header{
     align-items: center;
     justify-content: space-between;
     box-shadow: var(--box-shadow);
+    z-index: 1;
 }
 
 header .navbar a{
@@ -108,12 +109,12 @@ aside ul li .active{
     border-radius: 0.5rem;
 }
 body{
+    z-index:-1;
     margin-left:10rem;
     margin-top: 6rem;
 }
 
 section{
-    z-index:-1;
     padding: 1rem 5%;
     position:relative;
 }
@@ -125,6 +126,59 @@ section{
 }
 
 
+
+
+section .container{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px,1fr));
+    gap:1rem;
+    display:block;
+    margin-bottom:2rem;
+}
+section .container .team-content{
+    display: flex;
+    justify-content: start;
+    align-items: center;
+    background:var(--white-color);
+    padding:1rem;
+    border-radius:.5rem;
+    box-shadow:var(--box-shadow);
+    margin-top: 2rem;
+    margin-bottom:2rem;
+}
+
+section .container .team-content img{
+    width:20rem;
+    height:20rem;
+    border-radius:25rem;
+    object-fit: cover;
+    margin-right: 1rem;
+}
+section .container .wrapper{
+    display: flex;
+    justify-content: space-between;
+    flex-wrap:wrap;
+    align-items: center;
+    background:var(--white-color);
+    padding:1rem;
+    border-radius:.5rem;
+    box-shadow:var(--box-shadow);
+    margin-top: 2rem;
+    margin-bottom:2rem;
+}
+section .container .card{
+    width: 22%;
+}
+section .container  .card img{
+    width:15rem;
+    height:15rem;
+    border-radius:25rem;
+    object-fit: cover;
+    margin-right: 1rem;
+    margin-left:2rem;
+    margin-top:2rem;
+    margin-bottom: 1rem;
+}
 @media (max-width:1360px){
     html{
         font-size:85%;

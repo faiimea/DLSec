@@ -20,4 +20,5 @@ urlpatterns = [
     # path("admin/", admin.site.urls),
     path('index/', views.index),
     path('cv/', views.cv),
+    path('upload/', views.upload),
 ]

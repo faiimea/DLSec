@@ -15,7 +15,7 @@
 </head>
 
 
-<body onload="loadMarkdownFile()"> 
+<body> 
     <header>
         
         <a href="#" class="logo"><i class="fas-fa-untensiles"></i>深度学习模型安全评估平台</a>
@@ -47,9 +47,9 @@
         <h1 class="section-title">上传模型</h1>
         <div class="upload-container">
             <div class="upload-box">
-                <form action="/upload" method="post" enctype="multipart/form-data">
+                <form action="/upload/" method="post" enctype="multipart/form-data">
                     {% csrf_token %}
-                    <input type="file" name="model" id="model" accept=".h5,.hdf5,.hdf
+                    <input type="file" name="model" id="model" accept=".h5,.hdf5,.hdf">
                     <button type="submit">上传</button>
                 </form>
             </div>
