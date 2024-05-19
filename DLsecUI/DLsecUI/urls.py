@@ -21,4 +21,5 @@ urlpatterns = [
     path('index/', views.index),
     path('cv/', views.cv),
     path('upload/', views.upload),
+    path('setting/',views.setting)
 ]

@@ -31,6 +31,8 @@ html{
     scroll-behavior: smooth;
 }
 
+
+
 header{
     position:fixed;
     top:0;
@@ -178,6 +180,134 @@ section .container  .card img{
     margin-left:2rem;
     margin-top:2rem;
     margin-bottom: 1rem;
+}
+
+#setting li{
+    list-style-type: none;
+    margin:0rem 1rem;
+    padding:1rem 1rem;
+    font-weight: bold;
+}
+
+#setting li label{
+    margin-right: 1rem;
+    font-size:1.1rem;
+}
+
+#setting button{
+    padding:0.5rem 1rem;
+    font-size:1rem;
+    background-color: #fff;
+    color:var(--blue);
+    border: .1rem solid var(--blue);
+    border-radius:.5rem;
+    cursor:pointer;
+    margin-top:1rem;
+    font-weight: bold;
+    margin-right:3rem;
+
+}
+
+#setting button:hover{
+    background-color: var(--light-blue);
+    color: #fff;
+}
+
+#setting select{
+    padding:0.3rem 0.3rem;
+    font-size:.8rem;
+    background-color: #fff;
+
+    border: .1rem solid var(--blue);
+    border-radius:.5rem;
+    cursor:pointer;
+    margin-top:.5rem;
+    font-weight: bold;
+}
+
+#setting input{
+    padding:0.3rem 0.3rem;
+    font-size:.8rem;
+    background-color: #fff;
+
+    border-radius:.5rem;
+    cursor:pointer;
+    margin-top:.5rem;
+    font-weight: bold;
+    margin-bottom:1rem;
+}
+#setting .setting-container{
+    display: flex;
+    flex-direction: row;
+    flex-direction: row;
+    justify-content: space-between;
+    flex-wrap:wrap;
+    align-items: center;
+    background:var(--white-color);
+    padding:1rem;
+    border-radius:.5rem;
+    box-shadow:var(--box-shadow);
+    margin-top: 2rem;
+    margin-bottom:2rem;
+}
+
+#setting .setting-container .setting-box{
+    display: inline-flex;
+
+}
+#setting .setting-container .setting-box-2{
+    display: inline-flex;
+ 
+}
+
+
+
+#setting .setting-container .setting-box-2 ul{
+    padding:1rem 0rem;
+    margin:1rem 3rem;
+    font-weight: 1rem;
+
+}
+#setting .setting-container .setting-box-2 ul li{
+    padding:0rem 0rem;
+    margin:0rem 0rem;
+    font-weight: 1rem;
+
+}
+#setting .setting-container  .hidden{
+    display:none;
+}
+
+#test button{
+    padding:0.5rem 1rem;
+    font-size:1rem;
+    background-color: #fff;
+    color:var(--blue);
+    border: .1rem solid var(--blue);
+    border-radius:.5rem;
+    cursor:pointer;
+    margin-top:1rem;
+    font-weight: bold;
+    margin-right:3rem;
+
+}
+
+#test button:hover{
+    background-color: var(--light-blue);
+    color: #fff;
+}
+
+
+#test textarea{
+    padding:0.3rem 0.3rem;
+    font-size:.8rem;
+    background-color: #fff;
+
+    border-radius:.5rem;
+    cursor:pointer;
+    margin-top:.5rem;
+    font-weight: bold;
+    margin-bottom:1rem;
 }
 @media (max-width:1360px){
     html{

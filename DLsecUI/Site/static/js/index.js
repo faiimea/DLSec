@@ -1,3 +1,4 @@
+
 $(document).ready(function() {
     $('.sidebar a').on('click', function(e) {
         e.preventDefault();
@@ -14,3 +15,4 @@ $(document).ready(function() {
         $(section).show();
     });
 });
+

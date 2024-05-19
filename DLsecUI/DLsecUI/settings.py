@@ -37,7 +37,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "Site.apps.SiteConfig"
+    "Site.apps.SiteConfig",
+    "channels"
 ]
 
 MIDDLEWARE = [
@@ -70,7 +71,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "DLsecUI.wsgi.application"
-
+ASGI_APPLICATION = "DLsecUI.routing.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases

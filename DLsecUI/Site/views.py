@@ -1,5 +1,8 @@
 from django.shortcuts import render,HttpResponse
-from django.core.files.storage import FileSystemStorage
+from django.core.files.storage import FileSystemStorage as fs
+from django.http import HttpResponseRedirect
+from django.contrib import messages
+
 # Create your views here.
 def test(request):
     return HttpResponse("Hello, world.")
@@ -16,3 +19,12 @@ def upload(request):
         fs.FileSystemStorage()
         name=fs.save(uploaded_file.name, uploaded_file)
         file_url=fs.url(name)
+    
+def setting (request):
+    if request.method == 'POST':
+       status={
+           'state':'正在运行',
+       }
+            
+    return render(request,"cv.html",status)
+
